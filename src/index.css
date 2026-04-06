@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+body {
+  margin: 0;
+  background-color: #fff8fa;
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  max-width: 430px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  background: #fff8fa;
+  position: relative;
+  box-shadow: 0 0 40px rgba(244, 63, 117, 0.08);
+}
+
+button:focus-visible {
+  outline: 2px solid #f43f75;
+  outline-offset: 2px;
+}
