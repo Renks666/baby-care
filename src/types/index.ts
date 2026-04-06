@@ -67,12 +67,42 @@ export interface WalkRecord {
   notes?: string
 }
 
-// ── Здоровье (температура) ───────────────────────────────
+// ── Здоровье: температура ────────────────────────────────
+export interface TempRecord {
+  id: string
+  childId: string
+  time: string
+  temperature: number // °C
+  notes?: string
+}
+
+// ── Здоровье: медикаменты ────────────────────────────────
+export interface MedicationRecord {
+  id: string
+  childId: string
+  time: string
+  name: string
+  dose: string   // напр. "5 мл", "1/4 таб"
+  notes?: string
+}
+
+// ── Здоровье: вакцины ────────────────────────────────────
+export interface VaccineRecord {
+  id: string
+  childId: string
+  name: string
+  scheduledDate: string // ISO — плановая дата
+  doneDate?: string     // ISO — дата выполнения
+  done: boolean
+  notes?: string
+}
+
+/** @deprecated use TempRecord */
 export interface HealthRecord {
   id: string
   childId: string
   time: string
-  temperature?: number // °C
+  temperature?: number
   notes?: string
 }
 

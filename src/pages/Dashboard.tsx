@@ -8,6 +8,8 @@ import { useDiaperStore } from '../store/diaperStore'
 import { useGrowthStore } from '../store/growthStore'
 import { Card } from '../components/common/Card'
 import { Timer } from '../components/common/Timer'
+import { format } from 'date-fns'
+import { ru } from 'date-fns/locale'
 import {
   formatAge, formatTimeAgo, formatDuration, getHoursSince,
 } from '../utils/formatTime'
@@ -69,8 +71,8 @@ export function Dashboard() {
       <div className="pt-12 pb-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-gray-400">Сегодня</p>
-            <h1 className="text-2xl font-bold text-gray-800">Привет!</h1>
+            <p className="text-sm text-gray-400">Сегодня, {format(new Date(), 'd MMMM', { locale: ru })}</p>
+            <h1 className="text-2xl font-bold text-gray-800">Привет, мама Стейси 🤍</h1>
           </div>
           <motion.button
             whileTap={{ scale: 0.92 }}

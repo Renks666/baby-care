@@ -10,6 +10,7 @@ import { Timer } from '../components/common/Timer'
 import { Drawer } from '../components/common/Drawer'
 import { formatDuration, formatTime } from '../utils/formatTime'
 import { pageVariants, listVariants, itemVariants } from '../utils/animations'
+import { showTimerNotification, closeTimerNotification } from '../utils/notifications'
 import type { FeedingType, BreastSide } from '../types'
 
 type FeedingDef = {
@@ -59,14 +60,30 @@ export function Feeding() {
     startFeeding(selectedType, selectedType === 'breast' ? selectedSide : undefined)
     setDrawerOpen(false)
     toast.success('Таймер запущен')
+    const label = TYPES.find((t) => t.value === selectedType)?.label ?? 'Кормление'
+    const side = selectedType === 'breast' ? ` · ${SIDES.find((s) => s.value === selectedSide)?.label ?? ''}` : ''
+    showTimerNotification({
+      tag: 'feeding-timer',
+      title: `🍼 ${label}${side}`,
+      body: `Началось в ${new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`,
+    })
   }
 
   function handleStop() {
+    const active = activeFeeding
     stopFeeding(amount ? parseFloat(amount) : undefined, notes || undefined)
     setAmount('')
     setNotes('')
     setStopDrawerOpen(false)
     toast.success('Кормление сохранено')
+    closeTimerNotification('feeding-timer')
+    if (active) {
+      showTimerNotification({
+        tag: 'feeding-done',
+        title: '✅ Кормление завершено',
+        body: formatDuration(active.startTime),
+      })
+    }
   }
 
   function handleManualAdd() {

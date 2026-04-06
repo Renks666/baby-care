@@ -1,10 +1,11 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { House, Clock, BarChart3, Baby } from 'lucide-react'
+import { House, Clock, BarChart3, Baby, HeartPulse } from 'lucide-react'
 
 const tabs = [
   { path: '/', label: 'Главная', Icon: House },
   { path: '/timeline', label: 'История', Icon: Clock },
+  { path: '/health', label: 'Здоровье', Icon: HeartPulse },
   { path: '/analytics', label: 'Графики', Icon: BarChart3 },
   { path: '/profile', label: 'Профиль', Icon: Baby },
 ]

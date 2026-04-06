@@ -9,6 +9,7 @@ import { Diaper } from './pages/Diaper'
 import { Growth } from './pages/Growth'
 import { Timeline } from './pages/Timeline'
 import { Profile } from './pages/Profile'
+import { Health } from './pages/Health'
 
 function AnimatedRoutes() {
   const location = useLocation()
@@ -21,6 +22,7 @@ function AnimatedRoutes() {
         <Route path="/diaper" element={<Diaper />} />
         <Route path="/growth" element={<Growth />} />
         <Route path="/timeline" element={<Timeline />} />
+        <Route path="/health" element={<Health />} />
         <Route path="/profile" element={<Profile />} />
       </Routes>
     </AnimatePresence>

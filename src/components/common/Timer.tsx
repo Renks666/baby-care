@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { formatDuration } from '../../utils/formatTime'
 
 interface TimerProps {
   startTime: string
@@ -8,13 +7,39 @@ interface TimerProps {
   showPulse?: boolean
 }
 
+function getElapsed(startTime: string): string {
+  const totalSeconds = Math.floor((Date.now() - new Date(startTime).getTime()) / 1000)
+  const h = Math.floor(totalSeconds / 3600)
+  const m = Math.floor((totalSeconds % 3600) / 60)
+  const s = totalSeconds % 60
+  const mm = String(m).padStart(2, '0')
+  const ss = String(s).padStart(2, '0')
+  if (h > 0) return `${h}:${mm}:${ss}`
+  return `${mm}:${ss}`
+}
+
 export function Timer({ startTime, className = '', showPulse = false }: TimerProps) {
-  const [, setTick] = useState(0)
+  const [display, setDisplay] = useState(() => getElapsed(startTime))
+
+  const tick = useCallback(() => {
+    setDisplay(getElapsed(startTime))
+  }, [startTime])
 
   useEffect(() => {
-    const interval = setInterval(() => setTick((t) => t + 1), 1000)
-    return () => clearInterval(interval)
-  }, [])
+    tick()
+    const interval = setInterval(tick, 1000)
+
+    // При возврате из фона — мгновенно пересчитываем
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') tick()
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
+  }, [tick])
 
   return (
     <div className="relative inline-flex items-center justify-center">
@@ -37,7 +62,7 @@ export function Timer({ startTime, className = '', showPulse = false }: TimerPro
         animate={showPulse ? { scale: [1, 1.03, 1] } : {}}
         transition={showPulse ? { duration: 1, repeat: Infinity } : {}}
       >
-        {formatDuration(startTime)}
+        {display}
       </motion.span>
     </div>
   )
