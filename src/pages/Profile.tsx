@@ -148,7 +148,7 @@ export function Profile() {
               })}
             />
             {child.birthWeight && (
-              <InfoRow label="Вес при рождении" value={`${(child.birthWeight / 1000).toFixed(2)} кг`} />
+              <InfoRow label="Вес при рождении" value={`${(child.birthWeight / 1000).toFixed(3)} кг`} />
             )}
             {child.birthHeight && (
               <InfoRow label="Рост при рождении" value={`${child.birthHeight} см`} />
