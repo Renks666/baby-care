@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import {
   ChevronLeft, Thermometer, Pill, Syringe,
-  Trash2, CheckCircle2, Circle, Plus,
+  Trash2, CheckCircle2, Circle, Plus, Clock, XCircle, CalendarClock, ToggleLeft, ToggleRight,
 } from 'lucide-react'
 import { useHealthStore } from '../store/healthStore'
 import { Card } from '../components/common/Card'
@@ -36,9 +36,11 @@ export function Health() {
   const navigate = useNavigate()
   const {
     temps, medications, vaccines,
+    scheduledMeds,
     addTemp, deleteTemp,
     addMedication, deleteMedication,
     markVaccineDone, markVaccineUndone, addVaccine, deleteVaccine,
+    addScheduledMed, removeScheduledMed, toggleScheduledMed, logDose, skipDose, getTodayDoses,
   } = useHealthStore()
 
   const [tab, setTab] = useState<Tab>('temp')
@@ -48,11 +50,20 @@ export function Health() {
   const [tempVal, setTempVal] = useState('')
   const [tempNotes, setTempNotes] = useState('')
 
-  // Drawer: медикамент
+  // Drawer: медикамент (разовый)
   const [medDrawer, setMedDrawer] = useState(false)
   const [medName, setMedName] = useState('')
   const [medDose, setMedDose] = useState('')
   const [medNotes, setMedNotes] = useState('')
+
+  // Drawer: расписание лекарства
+  const [schedDrawer, setSchedDrawer] = useState(false)
+  const [schedName, setSchedName] = useState('')
+  const [schedDose, setSchedDose] = useState('')
+  const [schedTimes, setSchedTimes] = useState<string[]>(['09:00'])
+
+  const todayStr = new Date().toISOString().slice(0, 10)
+  const todayDoses = getTodayDoses(todayStr)
 
   // Drawer: прививка (кастомная)
   const [vaccDrawer, setVaccDrawer] = useState(false)
@@ -72,6 +83,19 @@ export function Health() {
     setTempNotes('')
     setTempDrawer(false)
     toast.success('Температура записана')
+  }
+
+  function handleAddScheduled() {
+    if (!schedName.trim() || !schedDose.trim() || schedTimes.length === 0) {
+      toast.error('Заполните название, дозу и время')
+      return
+    }
+    addScheduledMed(schedName.trim(), schedDose.trim(), schedTimes)
+    setSchedName('')
+    setSchedDose('')
+    setSchedTimes(['09:00'])
+    setSchedDrawer(false)
+    toast.success('Расписание добавлено')
   }
 
   function handleAddMed() {
@@ -126,7 +150,7 @@ export function Health() {
             <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
               <Thermometer size={16} className="text-red-500" />
             </div>
-            <h1 className="text-xl font-bold text-gray-800">Здоровье</h1>
+            <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Здоровье</h1>
           </div>
         </div>
 
@@ -143,7 +167,7 @@ export function Health() {
               className={`flex-1 flex flex-col items-center gap-1 py-2.5 rounded-2xl text-xs font-medium transition-colors ${
                 tab === key
                   ? 'bg-red-500 text-white shadow-sm'
-                  : 'bg-gray-100 text-gray-500'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
               }`}
             >
               <Icon size={16} />
@@ -188,18 +212,18 @@ export function Health() {
                 + Записать температуру
               </Button>
 
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+              <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-3">
                 История ({temps.length})
               </p>
               {temps.length === 0 ? (
-                <p className="text-center text-gray-300 text-sm py-8">Нет записей</p>
+                <p className="text-center text-gray-300 dark:text-gray-600 text-sm py-8">Нет записей</p>
               ) : (
                 <motion.div variants={listVariants} initial="initial" animate="animate" className="space-y-2">
                   {temps.map((r) => (
                     <motion.div
                       key={r.id}
                       variants={itemVariants}
-                      className="bg-white rounded-xl p-3 border border-gray-100 flex items-center gap-3"
+                      className="bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-100 dark:border-gray-700 flex items-center gap-3"
                     >
                       <div className={`w-9 h-9 rounded-full ${tempBg(r.temperature)} flex items-center justify-center shrink-0`}>
                         <Thermometer size={16} className={tempColor(r.temperature)} />
@@ -235,28 +259,125 @@ export function Health() {
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.18 }}
             >
-              <Button fullWidth onClick={() => setMedDrawer(true)} className="mb-4">
-                + Добавить препарат
-              </Button>
+              {/* Расписание сегодня */}
+              {scheduledMeds.filter((m) => m.active).length > 0 && (
+                <div className="mb-4">
+                  <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">
+                    Расписание сегодня
+                  </p>
+                  <div className="space-y-2">
+                    {todayDoses.map(({ med, time, log }) => (
+                      <div
+                        key={`${med.id}-${time}`}
+                        className={`flex items-center gap-3 rounded-xl px-3 py-2.5 border ${
+                          log?.taken
+                            ? 'bg-green-50 dark:bg-green-950/20 border-green-100 dark:border-green-900/40'
+                            : log?.taken === false
+                            ? 'bg-gray-50 dark:bg-gray-800 border-gray-100 dark:border-gray-700 opacity-60'
+                            : 'bg-white dark:bg-gray-800 border-purple-100 dark:border-gray-700'
+                        }`}
+                      >
+                        <div className="w-8 h-8 rounded-full bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center shrink-0">
+                          <Pill size={14} className="text-purple-500" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-700 dark:text-gray-200 leading-snug">
+                            {med.name} · {med.dose}
+                          </p>
+                          <p className="text-xs text-gray-400 flex items-center gap-1">
+                            <Clock size={10} /> {time}
+                          </p>
+                        </div>
+                        {log?.taken ? (
+                          <span className="text-xs text-green-600 dark:text-green-400 font-medium">✓ принято</span>
+                        ) : log?.taken === false ? (
+                          <span className="text-xs text-gray-400">пропущено</span>
+                        ) : (
+                          <div className="flex gap-1.5">
+                            <button
+                              onClick={() => { logDose(med.id, todayStr, time); toast.success('Принято') }}
+                              className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-lg text-xs font-medium active:scale-95 transition-transform"
+                            >
+                              Принято
+                            </button>
+                            <button
+                              onClick={() => { skipDose(med.id, todayStr, time); toast('Пропущено') }}
+                              className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-500 rounded-lg text-xs font-medium active:scale-95 transition-transform"
+                            >
+                              Пропуск
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+              {/* Активные назначения */}
+              {scheduledMeds.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">
+                    Назначения
+                  </p>
+                  <div className="space-y-2">
+                    {scheduledMeds.map((med) => (
+                      <div key={med.id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 px-3 py-2.5 flex items-center gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{med.name}</p>
+                          <p className="text-xs text-gray-400">{med.dose} · {med.times.join(', ')}</p>
+                        </div>
+                        <button onClick={() => toggleScheduledMed(med.id)} className="p-1 text-gray-400">
+                          {med.active
+                            ? <ToggleRight size={20} className="text-purple-500" />
+                            : <ToggleLeft size={20} className="text-gray-300" />
+                          }
+                        </button>
+                        <button onClick={() => { removeScheduledMed(med.id); toast('Назначение удалено') }} className="p-1 text-gray-300 hover:text-red-400">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Кнопки */}
+              <div className="flex gap-2 mb-4">
+                <button
+                  onClick={() => setSchedDrawer(true)}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-purple-200 dark:border-gray-600 text-sm font-medium text-purple-500 dark:text-purple-400 active:scale-95 transition-transform"
+                >
+                  <CalendarClock size={15} />
+                  + Расписание
+                </button>
+                <button
+                  onClick={() => setMedDrawer(true)}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 text-sm font-medium text-gray-500 dark:text-gray-400 active:scale-95 transition-transform"
+                >
+                  <Plus size={15} />
+                  + Разово
+                </button>
+              </div>
+
+              <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-3">
                 История ({medications.length})
               </p>
               {medications.length === 0 ? (
-                <p className="text-center text-gray-300 text-sm py-8">Нет записей</p>
+                <p className="text-center text-gray-300 dark:text-gray-600 text-sm py-4">Нет записей</p>
               ) : (
                 <motion.div variants={listVariants} initial="initial" animate="animate" className="space-y-2">
                   {medications.map((r) => (
                     <motion.div
                       key={r.id}
                       variants={itemVariants}
-                      className="bg-white rounded-xl p-3 border border-gray-100 flex items-center gap-3"
+                      className="bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-100 dark:border-gray-700 flex items-center gap-3"
                     >
                       <div className="w-9 h-9 rounded-full bg-purple-50 flex items-center justify-center shrink-0">
                         <Pill size={16} className="text-purple-500" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-700">
+                        <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
                           {r.name}
                           <span className="text-xs text-gray-400 ml-2">{r.dose}</span>
                         </p>
@@ -289,10 +410,10 @@ export function Health() {
               {/* Прогресс */}
               <Card className="mb-4">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm font-semibold text-gray-700">Выполнено</p>
+                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">Выполнено</p>
                   <p className="text-sm font-bold text-emerald-600">{doneCount} / {vaccines.length}</p>
                 </div>
-                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${vaccines.length ? (doneCount / vaccines.length) * 100 : 0}%` }}
@@ -318,8 +439,8 @@ export function Health() {
                     <motion.div
                       key={v.id}
                       variants={itemVariants}
-                      className={`bg-white rounded-xl p-3 border flex items-center gap-3 ${
-                        v.done ? 'border-emerald-100 opacity-70' : isOverdue ? 'border-red-200' : 'border-gray-100'
+                      className={`bg-white dark:bg-gray-800 rounded-xl p-3 border flex items-center gap-3 ${
+                        v.done ? 'border-emerald-100 dark:border-emerald-900 opacity-70' : isOverdue ? 'border-red-200' : 'border-gray-100 dark:border-gray-700'
                       }`}
                     >
                       <motion.button
@@ -333,7 +454,7 @@ export function Health() {
                         }
                       </motion.button>
                       <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-medium ${v.done ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+                        <p className={`text-sm font-medium ${v.done ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-200'}`}>
                           {v.name}
                         </p>
                         <p className={`text-xs mt-0.5 ${isOverdue && !v.done ? 'text-red-400 font-medium' : 'text-gray-400'}`}>
@@ -372,7 +493,7 @@ export function Health() {
               value={tempVal}
               onChange={(e) => setTempVal(e.target.value)}
               placeholder="например: 36.6"
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-red-400"
+              className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-red-400 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100"
             />
           </div>
           <div>
@@ -382,7 +503,7 @@ export function Health() {
               value={tempNotes}
               onChange={(e) => setTempNotes(e.target.value)}
               placeholder="например: после купания"
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-red-400"
+              className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-red-400 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100"
             />
           </div>
           {tempVal && !isNaN(parseFloat(tempVal)) && (
@@ -408,7 +529,7 @@ export function Health() {
               value={medName}
               onChange={(e) => setMedName(e.target.value)}
               placeholder="например: Нурофен, Виферон..."
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-purple-400"
+              className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-purple-400 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100"
             />
           </div>
           <div>
@@ -418,7 +539,7 @@ export function Health() {
               value={medDose}
               onChange={(e) => setMedDose(e.target.value)}
               placeholder="например: 2.5 мл"
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-purple-400"
+              className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-purple-400 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100"
             />
           </div>
           <div>
@@ -428,11 +549,75 @@ export function Health() {
               value={medNotes}
               onChange={(e) => setMedNotes(e.target.value)}
               placeholder="например: при температуре выше 38"
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-purple-400"
+              className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-purple-400 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100"
             />
           </div>
           <Button fullWidth size="lg" onClick={handleAddMed} disabled={!medName || !medDose}>
             Сохранить
+          </Button>
+        </div>
+      </Drawer>
+
+      {/* Drawer: расписание лекарства */}
+      <Drawer open={schedDrawer} onClose={() => setSchedDrawer(false)} title="Расписание приёма">
+        <div className="space-y-3 pb-2">
+          <div>
+            <label className="text-xs text-gray-500 font-medium block mb-1">Название</label>
+            <input
+              type="text"
+              value={schedName}
+              onChange={(e) => setSchedName(e.target.value)}
+              placeholder="например: Витамин D"
+              className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-purple-400 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 font-medium block mb-1">Доза</label>
+            <input
+              type="text"
+              value={schedDose}
+              onChange={(e) => setSchedDose(e.target.value)}
+              placeholder="например: 1 капля"
+              className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-purple-400 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 font-medium block mb-1">Время приёма</label>
+            <div className="space-y-2">
+              {schedTimes.map((t, i) => (
+                <div key={i} className="flex gap-2 items-center">
+                  <input
+                    type="time"
+                    value={t}
+                    onChange={(e) => {
+                      const updated = [...schedTimes]
+                      updated[i] = e.target.value
+                      setSchedTimes(updated)
+                    }}
+                    className="flex-1 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-purple-400 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100"
+                  />
+                  {schedTimes.length > 1 && (
+                    <button
+                      onClick={() => setSchedTimes(schedTimes.filter((_, j) => j !== i))}
+                      className="text-gray-300 hover:text-red-400"
+                    >
+                      <XCircle size={18} />
+                    </button>
+                  )}
+                </div>
+              ))}
+              {schedTimes.length < 4 && (
+                <button
+                  onClick={() => setSchedTimes([...schedTimes, '12:00'])}
+                  className="text-xs text-purple-500 font-medium flex items-center gap-1"
+                >
+                  <Plus size={12} /> Добавить время
+                </button>
+              )}
+            </div>
+          </div>
+          <Button fullWidth size="lg" onClick={handleAddScheduled} disabled={!schedName || !schedDose}>
+            Сохранить расписание
           </Button>
         </div>
       </Drawer>
@@ -447,7 +632,7 @@ export function Health() {
               value={vaccName}
               onChange={(e) => setVaccName(e.target.value)}
               placeholder="например: Менингококк"
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-400"
+              className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-400 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100"
             />
           </div>
           <div>
@@ -456,7 +641,7 @@ export function Health() {
               type="date"
               value={vaccDate}
               onChange={(e) => setVaccDate(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-400"
+              className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-400 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100"
             />
           </div>
           <Button fullWidth size="lg" onClick={handleAddVaccine} disabled={!vaccName || !vaccDate}>

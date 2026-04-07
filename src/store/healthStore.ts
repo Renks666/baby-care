@@ -4,6 +4,23 @@ import { v4 as uuid } from 'uuid'
 import { addDays, addMonths } from 'date-fns'
 import type { TempRecord, MedicationRecord, VaccineRecord } from '../types'
 
+export interface ScheduledMed {
+  id: string
+  name: string
+  dose: string
+  times: string[]   // HH:MM список, например ['09:00', '21:00']
+  active: boolean
+  startDate: string // YYYY-MM-DD
+}
+
+export interface DoseLog {
+  id: string
+  medId: string
+  date: string   // YYYY-MM-DD
+  time: string   // HH:MM
+  taken: boolean
+}
+
 // Стандартный календарь прививок РФ для Николь (рождена 29.03.2026)
 const BIRTH = new Date('2026-03-29')
 
@@ -45,6 +62,8 @@ interface HealthState {
   temps: TempRecord[]
   medications: MedicationRecord[]
   vaccines: VaccineRecord[]
+  scheduledMeds: ScheduledMed[]
+  doseLogs: DoseLog[]
 
   addTemp: (temp: number, notes?: string) => void
   deleteTemp: (id: string) => void
@@ -56,14 +75,23 @@ interface HealthState {
   markVaccineUndone: (id: string) => void
   addVaccine: (name: string, scheduledDate: string) => void
   deleteVaccine: (id: string) => void
+
+  addScheduledMed: (name: string, dose: string, times: string[]) => void
+  removeScheduledMed: (id: string) => void
+  toggleScheduledMed: (id: string) => void
+  logDose: (medId: string, date: string, time: string) => void
+  skipDose: (medId: string, date: string, time: string) => void
+  getTodayDoses: (date: string) => Array<{ med: ScheduledMed; time: string; log?: DoseLog }>
 }
 
 export const useHealthStore = create<HealthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       temps: [],
       medications: [],
       vaccines: DEFAULT_VACCINES,
+      scheduledMeds: [],
+      doseLogs: [],
 
       addTemp: (temperature, notes) => {
         const record: TempRecord = {
@@ -129,6 +157,80 @@ export const useHealthStore = create<HealthState>()(
 
       deleteVaccine: (id) => {
         set((s) => ({ vaccines: s.vaccines.filter((v) => v.id !== id) }))
+      },
+
+      addScheduledMed: (name, dose, times) => {
+        const med: ScheduledMed = {
+          id: uuid(),
+          name,
+          dose,
+          times,
+          active: true,
+          startDate: new Date().toISOString().slice(0, 10),
+        }
+        set((s) => ({ scheduledMeds: [...s.scheduledMeds, med] }))
+      },
+
+      removeScheduledMed: (id) =>
+        set((s) => ({
+          scheduledMeds: s.scheduledMeds.filter((m) => m.id !== id),
+          doseLogs: s.doseLogs.filter((l) => l.medId !== id),
+        })),
+
+      toggleScheduledMed: (id) =>
+        set((s) => ({
+          scheduledMeds: s.scheduledMeds.map((m) =>
+            m.id === id ? { ...m, active: !m.active } : m
+          ),
+        })),
+
+      logDose: (medId, date, time) =>
+        set((s) => {
+          const existing = s.doseLogs.find(
+            (l) => l.medId === medId && l.date === date && l.time === time
+          )
+          if (existing) {
+            return { doseLogs: s.doseLogs.map((l) =>
+              l.medId === medId && l.date === date && l.time === time
+                ? { ...l, taken: true }
+                : l
+            )}
+          }
+          return {
+            doseLogs: [...s.doseLogs, { id: uuid(), medId, date, time, taken: true }],
+          }
+        }),
+
+      skipDose: (medId, date, time) =>
+        set((s) => {
+          const existing = s.doseLogs.find(
+            (l) => l.medId === medId && l.date === date && l.time === time
+          )
+          if (existing) {
+            return { doseLogs: s.doseLogs.map((l) =>
+              l.medId === medId && l.date === date && l.time === time
+                ? { ...l, taken: false }
+                : l
+            )}
+          }
+          return {
+            doseLogs: [...s.doseLogs, { id: uuid(), medId, date, time, taken: false }],
+          }
+        }),
+
+      getTodayDoses: (date) => {
+        const { scheduledMeds, doseLogs } = get()
+        const result: Array<{ med: ScheduledMed; time: string; log?: DoseLog }> = []
+        for (const med of scheduledMeds) {
+          if (!med.active) continue
+          for (const time of med.times) {
+            const log = doseLogs.find(
+              (l) => l.medId === med.id && l.date === date && l.time === time
+            )
+            result.push({ med, time, log })
+          }
+        }
+        return result.sort((a, b) => a.time.localeCompare(b.time))
       },
     }),
     { name: 'babycare-health' }

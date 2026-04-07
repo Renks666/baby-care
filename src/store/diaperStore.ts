@@ -5,7 +5,7 @@ import type { DiaperRecord, DiaperType } from '../types'
 
 interface DiaperState {
   records: DiaperRecord[]
-  addRecord: (type: DiaperType, notes?: string) => void
+  addRecord: (type: DiaperType, notes?: string, time?: string) => void
   deleteRecord: (id: string) => void
   getToday: () => DiaperRecord[]
 }
@@ -15,11 +15,11 @@ export const useDiaperStore = create<DiaperState>()(
     (set, get) => ({
       records: [],
 
-      addRecord: (type, notes) => {
+      addRecord: (type, notes, time) => {
         const record: DiaperRecord = {
           id: uuid(),
           childId: 'nicole-001',
-          time: new Date().toISOString(),
+          time: time ?? new Date().toISOString(),
           type,
           notes,
         }

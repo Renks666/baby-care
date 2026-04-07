@@ -6,7 +6,7 @@ import type { FeedingRecord, FeedingType, BreastSide } from '../types'
 interface FeedingState {
   records: FeedingRecord[]
   activeFeeding: FeedingRecord | null
-  startFeeding: (type: FeedingType, side?: BreastSide) => void
+  startFeeding: (type: FeedingType, side?: BreastSide, startTime?: string) => void
   stopFeeding: (amount?: number, notes?: string) => void
   addRecord: (record: Omit<FeedingRecord, 'id'>) => void
   deleteRecord: (id: string) => void
@@ -19,12 +19,12 @@ export const useFeedingStore = create<FeedingState>()(
       records: [],
       activeFeeding: null,
 
-      startFeeding: (type, side) => {
+      startFeeding: (type, side, startTime) => {
         const record: FeedingRecord = {
           id: uuid(),
           childId: 'nicole-001',
           type,
-          startTime: new Date().toISOString(),
+          startTime: startTime ?? new Date().toISOString(),
           side,
         }
         set({ activeFeeding: record })

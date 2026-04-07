@@ -15,7 +15,7 @@ export function Card({ children, className = '', onClick }: CardProps) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2, ease: 'easeOut' }}
       whileTap={onClick ? { scale: 0.98 } : undefined}
-      className={`bg-white rounded-2xl shadow-sm border border-pink-50 p-4 ${onClick ? 'cursor-pointer' : ''} ${className}`}
+      className={`bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-pink-50 dark:border-gray-700 p-4 ${onClick ? 'cursor-pointer' : ''} ${className}`}
     >
       {children}
     </motion.div>

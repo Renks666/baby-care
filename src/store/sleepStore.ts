@@ -6,7 +6,7 @@ import type { SleepRecord, SleepType } from '../types'
 interface SleepState {
   records: SleepRecord[]
   activeSleep: SleepRecord | null
-  startSleep: (type?: SleepType) => void
+  startSleep: (type?: SleepType, startTime?: string) => void
   stopSleep: (quality?: number, notes?: string) => void
   addRecord: (record: Omit<SleepRecord, 'id'>) => void
   deleteRecord: (id: string) => void
@@ -24,12 +24,12 @@ export const useSleepStore = create<SleepState>()(
       records: [],
       activeSleep: null,
 
-      startSleep: (type) => {
+      startSleep: (type, startTime) => {
         const record: SleepRecord = {
           id: uuid(),
           childId: 'nicole-001',
           type: type ?? detectSleepType(),
-          startTime: new Date().toISOString(),
+          startTime: startTime ?? new Date().toISOString(),
         }
         set({ activeSleep: record })
       },

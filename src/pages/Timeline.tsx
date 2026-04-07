@@ -1,9 +1,11 @@
 import { motion } from 'framer-motion'
-import { Clock, Milk, Moon, Sun, Droplets, AlertCircle, CheckCircle2, Layers, Ruler, Heart } from 'lucide-react'
+import { Clock, Milk, Moon, Sun, Droplets, AlertCircle, CheckCircle2, Layers, Ruler, Heart, PenLine, FlipVertical2 } from 'lucide-react'
 import { useFeedingStore } from '../store/feedingStore'
 import { useSleepStore } from '../store/sleepStore'
 import { useDiaperStore } from '../store/diaperStore'
 import { useGrowthStore } from '../store/growthStore'
+import { useNotesStore } from '../store/notesStore'
+import { useTummyStore } from '../store/tummyStore'
 import { formatTime, formatDate, formatDuration } from '../utils/formatTime'
 import { pageVariants, listVariants, itemSlideVariants } from '../utils/animations'
 
@@ -74,6 +76,8 @@ export function Timeline() {
   const { records: sleepRecords } = useSleepStore()
   const { records: diaperRecords } = useDiaperStore()
   const { records: growthRecords } = useGrowthStore()
+  const { notes } = useNotesStore()
+  const { records: tummyRecords } = useTummyStore()
 
   const allEvents: EventItem[] = [
     ...feedRecords.map((r) => ({
@@ -120,6 +124,32 @@ export function Timeline() {
       ].filter(Boolean).join(' · '),
       borderColor: 'border-l-emerald-300',
     })),
+    ...tummyRecords.map((r) => ({
+      id: r.id,
+      time: r.startTime,
+      icon: (
+        <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center shrink-0">
+          <FlipVertical2 size={15} className="text-orange-500" />
+        </div>
+      ),
+      title: 'Время на животике',
+      subtitle: r.endTime
+        ? `${formatTime(r.startTime)} – ${formatTime(r.endTime)} · ${formatDuration(r.startTime, r.endTime)}`
+        : `${formatTime(r.startTime)} · не завершено`,
+      borderColor: 'border-l-orange-300',
+    })),
+    ...notes.map((n) => ({
+      id: n.id,
+      time: n.createdAt,
+      icon: (
+        <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center shrink-0">
+          <PenLine size={15} className="text-amber-500" />
+        </div>
+      ),
+      title: 'Заметка',
+      subtitle: n.text,
+      borderColor: 'border-l-amber-300',
+    })),
   ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
 
   // Группируем по дням
@@ -144,7 +174,7 @@ export function Timeline() {
         <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center">
           <Clock size={16} className="text-pink-500" />
         </div>
-        <h1 className="text-xl font-bold text-gray-800">История</h1>
+        <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">История</h1>
       </div>
 
       {days.length === 0 ? (
@@ -157,8 +187,8 @@ export function Timeline() {
           <div className="w-16 h-16 rounded-full bg-pink-50 flex items-center justify-center mx-auto mb-4">
             <Heart size={28} className="text-pink-300" />
           </div>
-          <p className="text-gray-400 text-sm font-medium">Пока нет записей</p>
-          <p className="text-gray-300 text-xs mt-1">Начните вести дневник</p>
+          <p className="text-gray-400 dark:text-gray-500 text-sm font-medium">Пока нет записей</p>
+          <p className="text-gray-300 dark:text-gray-600 text-xs mt-1">Начните вести дневник</p>
         </motion.div>
       ) : (
         <div className="space-y-6">
@@ -169,8 +199,8 @@ export function Timeline() {
             return (
               <div key={dateKey}>
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label}</span>
-                  <span className="text-xs text-gray-300">· {events.length} записей</span>
+                  <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">{label}</span>
+                  <span className="text-xs text-gray-300 dark:text-gray-600">· {events.length} записей</span>
                 </div>
                 <motion.div
                   variants={listVariants}
@@ -182,12 +212,12 @@ export function Timeline() {
                     <motion.div
                       key={e.id}
                       variants={itemSlideVariants}
-                      className={`bg-white rounded-xl px-3 py-2.5 border border-gray-50 border-l-4 ${e.borderColor} flex items-center gap-3`}
+                      className={`bg-white dark:bg-gray-800 rounded-xl px-3 py-2.5 border border-gray-50 dark:border-gray-700 border-l-4 ${e.borderColor} flex items-center gap-3`}
                     >
                       {e.icon}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-700">{e.title}</p>
-                        <p className="text-xs text-gray-400">{e.subtitle}</p>
+                        <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{e.title}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500">{e.subtitle}</p>
                       </div>
                     </motion.div>
                   ))}

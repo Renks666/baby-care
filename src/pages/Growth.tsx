@@ -22,6 +22,7 @@ export function Growth() {
   const [weight, setWeight] = useState('')
   const [height, setHeight] = useState('')
   const [headCirc, setHeadCirc] = useState('')
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [activeTab, setActiveTab] = useState<'weight' | 'height' | 'head'>('weight')
 
   const latest = getLatest()
@@ -29,7 +30,7 @@ export function Growth() {
   function handleAdd() {
     if (!weight && !height && !headCirc) return
     addRecord({
-      date: new Date().toISOString(),
+      date: new Date(date).toISOString(),
       weight: weight ? parseFloat(weight) * 1000 : undefined,
       height: height ? parseFloat(height) : undefined,
       headCirc: headCirc ? parseFloat(headCirc) : undefined,
@@ -37,6 +38,7 @@ export function Growth() {
     setWeight('')
     setHeight('')
     setHeadCirc('')
+    setDate(new Date().toISOString().slice(0, 10))
     setDrawerOpen(false)
     toast.success('Замер сохранён')
   }
@@ -78,7 +80,7 @@ export function Growth() {
             <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
               <Ruler size={16} className="text-emerald-500" />
             </div>
-            <h1 className="text-xl font-bold text-gray-800">Рост и вес</h1>
+            <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Рост и вес</h1>
           </div>
         </div>
 
@@ -119,7 +121,7 @@ export function Growth() {
                   key={tab}
                   onClick={() => setActiveTab(tab)}
                   className={`flex-1 py-1.5 rounded-xl text-xs font-medium transition-colors ${
-                    activeTab === tab ? 'bg-pink-500 text-white' : 'bg-gray-100 text-gray-500'
+                    activeTab === tab ? 'bg-pink-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
                   }`}
                 >
                   {tab === 'weight' ? 'Вес' : tab === 'height' ? 'Рост' : 'Голова'}
@@ -154,24 +156,24 @@ export function Growth() {
         )}
 
         {/* История */}
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+        <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-3">
           История ({records.length})
         </p>
         {records.length === 0 ? (
-          <p className="text-center text-gray-300 text-sm py-8">Нет записей</p>
+          <p className="text-center text-gray-300 dark:text-gray-600 text-sm py-8">Нет записей</p>
         ) : (
           <motion.div variants={listVariants} initial="initial" animate="animate" className="space-y-2">
             {records.map((r) => (
               <motion.div
                 key={r.id}
                 variants={itemVariants}
-                className="bg-white rounded-xl p-3 border border-gray-100 flex items-center gap-3"
+                className="bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-100 dark:border-gray-700 flex items-center gap-3"
               >
                 <div className="w-9 h-9 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
                   <Ruler size={16} className="text-emerald-500" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-700">
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
                     {r.weight ? `${(r.weight / 1000).toFixed(2)} кг` : ''}
                     {r.weight && r.height ? ' · ' : ''}
                     {r.height ? `${r.height} см` : ''}
@@ -197,36 +199,46 @@ export function Growth() {
       <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} title="Новый замер">
         <div className="space-y-3 pb-2">
           <div>
-            <label className="text-xs text-gray-500 font-medium block mb-1">Вес (кг)</label>
+            <label className="text-xs text-gray-500 dark:text-gray-400 font-medium block mb-1">Дата замера</label>
+            <input
+              type="date"
+              value={date}
+              max={new Date().toISOString().slice(0, 10)}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-pink-400 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 dark:text-gray-400 font-medium block mb-1">Вес (кг)</label>
             <input
               type="number"
               step="0.01"
               value={weight}
               onChange={(e) => setWeight(e.target.value)}
               placeholder="например: 3.85"
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-pink-400"
+              className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-pink-400 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100"
             />
           </div>
           <div>
-            <label className="text-xs text-gray-500 font-medium block mb-1">Рост (см)</label>
+            <label className="text-xs text-gray-500 dark:text-gray-400 font-medium block mb-1">Рост (см)</label>
             <input
               type="number"
               step="0.1"
               value={height}
               onChange={(e) => setHeight(e.target.value)}
               placeholder="например: 52.5"
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-pink-400"
+              className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-pink-400 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100"
             />
           </div>
           <div>
-            <label className="text-xs text-gray-500 font-medium block mb-1">Окружность головы (см)</label>
+            <label className="text-xs text-gray-500 dark:text-gray-400 font-medium block mb-1">Окружность головы (см)</label>
             <input
               type="number"
               step="0.1"
               value={headCirc}
               onChange={(e) => setHeadCirc(e.target.value)}
               placeholder="например: 35"
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-pink-400"
+              className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-pink-400 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100"
             />
           </div>
           <Button
