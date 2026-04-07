@@ -10,7 +10,6 @@ import { Timer } from '../components/common/Timer'
 import { Drawer } from '../components/common/Drawer'
 import { formatDuration, formatTime } from '../utils/formatTime'
 import { pageVariants, listVariants, itemVariants } from '../utils/animations'
-import { showTimerNotification, closeTimerNotification } from '../utils/notifications'
 import type { SleepType } from '../types'
 
 type SleepTypeDef = {
@@ -69,29 +68,14 @@ export function Sleep() {
     startSleep(selectedType, resolveToISO(manualStartTime))
     setStartDrawerOpen(false)
     toast.success('Укладываемся спать')
-    const label = selectedType === 'night' ? 'Ночной сон' : 'Дневной сон'
-    showTimerNotification({
-      tag: 'sleep-timer',
-      title: `😴 ${label}`,
-      body: `Засыпание в ${manualStartTime}`,
-    })
   }
 
   function handleStop() {
-    const active = activeSleep
     stopSleep(quality || undefined, notes || undefined)
     setQuality(0)
     setNotes('')
     setStopDrawerOpen(false)
     toast.success('Сон сохранён')
-    closeTimerNotification('sleep-timer')
-    if (active) {
-      showTimerNotification({
-        tag: 'sleep-done',
-        title: '✅ Никоша проснулась',
-        body: `Спала ${formatDuration(active.startTime)}`,
-      })
-    }
   }
 
   function handleManualAdd() {
