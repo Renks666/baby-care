@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
-import { Clock, Milk, Moon, Sun, Droplets, AlertCircle, CheckCircle2, Layers, Ruler, Heart, PenLine, FlipVertical2 } from 'lucide-react'
+import { Clock, Milk, Moon, Sun, Droplets, AlertCircle, CheckCircle2, Layers, Ruler, Heart, PenLine, FlipVertical2, Footprints } from 'lucide-react'
 import { ActionButtons } from '../components/ui/ActionButtons'
 import { useFeedingStore } from '../store/feedingStore'
 import { useSleepStore } from '../store/sleepStore'
@@ -9,6 +9,7 @@ import { useDiaperStore } from '../store/diaperStore'
 import { useGrowthStore } from '../store/growthStore'
 import { useNotesStore } from '../store/notesStore'
 import { useTummyStore } from '../store/tummyStore'
+import { useWalkStore } from '../store/walkStore'
 import { Drawer } from '../components/common/Drawer'
 import { formatTime, formatDate, formatDuration } from '../utils/formatTime'
 import { pageVariants, listVariants, itemSlideVariants } from '../utils/animations'
@@ -16,7 +17,7 @@ import type { FeedingType, DiaperType, SleepType } from '../types'
 
 // ── Типы ─────────────────────────────────────────────────
 
-type EventKind = 'feeding' | 'sleep' | 'diaper' | 'growth' | 'tummy' | 'note'
+type EventKind = 'feeding' | 'sleep' | 'diaper' | 'growth' | 'tummy' | 'note' | 'walk'
 
 type EventItem = {
   id: string
@@ -124,6 +125,7 @@ function EditDrawer({ editState, onClose }: { editState: EditState; onClose: () 
   const { updateRecord: updateDiaper } = useDiaperStore()
   const { updateRecord: updateGrowth } = useGrowthStore()
   const { updateRecord: updateTummy } = useTummyStore()
+  const { updateRecord: updateWalk } = useWalkStore()
   const { updateNote } = useNotesStore()
 
   const [fields, setFields] = useState<Record<string, string>>({})
@@ -153,6 +155,10 @@ function EditDrawer({ editState, onClose }: { editState: EditState; onClose: () 
     } else if (editState.kind === 'tummy') {
       init.startTime = isoToHHMM(r.startTime as string)
       init.endTime = r.endTime ? isoToHHMM(r.endTime as string) : ''
+    } else if (editState.kind === 'walk') {
+      init.startTime = isoToHHMM(r.startTime as string)
+      init.endTime = r.endTime ? isoToHHMM(r.endTime as string) : ''
+      init.notes = (r.notes as string) ?? ''
     } else if (editState.kind === 'note') {
       init.text = (r.text as string) ?? ''
       init.date = (r.date as string) ?? new Date().toISOString().slice(0, 10)
@@ -200,6 +206,12 @@ function EditDrawer({ editState, onClose }: { editState: EditState; onClose: () 
         updateTummy(id, {
           startTime: applyHHMMToISO(r.startTime as string, fields.startTime),
           endTime: fields.endTime ? applyHHMMToISO((r.endTime ?? r.startTime) as string, fields.endTime) : undefined,
+        })
+      } else if (editState.kind === 'walk') {
+        updateWalk(id, {
+          startTime: applyHHMMToISO(r.startTime as string, fields.startTime),
+          endTime: fields.endTime ? applyHHMMToISO((r.endTime ?? r.startTime) as string, fields.endTime) : undefined,
+          notes: fields.notes?.trim() || undefined,
         })
       } else if (editState.kind === 'note') {
         updateNote(id, fields.text, fields.date)
@@ -347,6 +359,27 @@ function EditDrawer({ editState, onClose }: { editState: EditState; onClose: () 
       )
     }
 
+    if (editState.kind === 'walk') {
+      return (
+        <>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className={labelCls}>Начало</p>
+              <input type="time" value={fields.startTime} onChange={(e) => set('startTime', e.target.value)} className={inputCls} />
+            </div>
+            <div>
+              <p className={labelCls}>Конец</p>
+              <input type="time" value={fields.endTime} onChange={(e) => set('endTime', e.target.value)} className={inputCls} />
+            </div>
+          </div>
+          <div>
+            <p className={labelCls}>Заметка</p>
+            <textarea value={fields.notes ?? ''} onChange={(e) => set('notes', e.target.value)} rows={2} className={`${inputCls} resize-none`} />
+          </div>
+        </>
+      )
+    }
+
     if (editState.kind === 'note') {
       return (
         <>
@@ -371,6 +404,7 @@ function EditDrawer({ editState, onClose }: { editState: EditState; onClose: () 
     diaper: 'Редактировать подгузник',
     growth: 'Редактировать замер',
     tummy: 'Редактировать животик',
+    walk: 'Редактировать прогулку',
     note: 'Редактировать заметку',
   }
 
@@ -398,6 +432,7 @@ export function Timeline() {
   const { records: growthRecords } = useGrowthStore()
   const { notes } = useNotesStore()
   const { records: tummyRecords } = useTummyStore()
+  const { records: walkRecords } = useWalkStore()
 
   const [editState, setEditState] = useState<EditState>(null)
 
@@ -468,6 +503,22 @@ export function Timeline() {
         ? `${formatTime(r.startTime)} – ${formatTime(r.endTime)} · ${formatDuration(r.startTime, r.endTime)}`
         : `${formatTime(r.startTime)} · не завершено`,
       borderColor: 'border-l-orange-300',
+      raw: r as unknown as Record<string, unknown>,
+    })),
+    ...walkRecords.map((r) => ({
+      id: r.id,
+      kind: 'walk' as EventKind,
+      time: r.startTime,
+      icon: (
+        <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
+          <Footprints size={15} className="text-green-500" />
+        </div>
+      ),
+      title: 'Прогулка',
+      subtitle: r.endTime
+        ? `${formatTime(r.startTime)} – ${formatTime(r.endTime)} · ${formatDuration(r.startTime, r.endTime)}${r.notes ? ` · ${r.notes}` : ''}`
+        : `${formatTime(r.startTime)} · не завершена`,
+      borderColor: 'border-l-green-300',
       raw: r as unknown as Record<string, unknown>,
     })),
     ...notes.map((n) => ({

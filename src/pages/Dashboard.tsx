@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Milk, BedDouble, Droplets, Ruler, Sun, Moon, Baby, AlertCircle, Clock, BellRing, PenLine, Plus, FlipVertical2 } from 'lucide-react'
+import { Milk, BedDouble, Droplets, Ruler, Sun, Moon, Baby, AlertCircle, Clock, BellRing, PenLine, Plus, FlipVertical2, Footprints } from 'lucide-react'
 import { useThemeStore } from '../store/themeStore'
 import { useChildStore } from '../store/childStore'
 import { useFeedingStore } from '../store/feedingStore'
@@ -11,6 +11,7 @@ import { useGrowthStore } from '../store/growthStore'
 import { useNotesStore } from '../store/notesStore'
 import { ActionButtons } from '../components/ui/ActionButtons'
 import { useHealthStore } from '../store/healthStore'
+import { useWalkStore } from '../store/walkStore'
 import { Card } from '../components/common/Card'
 import { Drawer } from '../components/common/Drawer'
 import { Timer } from '../components/common/Timer'
@@ -49,6 +50,7 @@ export function Dashboard() {
   const { child } = useChildStore()
   const { records: feedRecords, activeFeeding } = useFeedingStore()
   const { records: sleepRecords, activeSleep } = useSleepStore()
+  const { activeWalk } = useWalkStore()
   const { getToday: getDiaperToday } = useDiaperStore()
   const { getLatest } = useGrowthStore()
 
@@ -202,7 +204,7 @@ export function Dashboard() {
       </div>
 
       {/* Активные таймеры */}
-      {(activeFeeding || activeSleep) && (
+      {(activeFeeding || activeSleep || activeWalk) && (
         <div className="mb-4 space-y-3">
           <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Активно сейчас</p>
 
@@ -241,6 +243,23 @@ export function Dashboard() {
                   </div>
                 </div>
                 <Timer startTime={activeSleep.startTime} className="text-purple-500 font-bold text-lg" showPulse />
+              </div>
+            </Card>
+          )}
+
+          {activeWalk && (
+            <Card className="border-green-200 bg-green-50 dark:bg-green-950 dark:border-green-900" onClick={() => navigate('/walk')}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                    <Footprints size={20} className="text-green-500" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-700 dark:text-gray-200">Прогулка</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">идёт</p>
+                  </div>
+                </div>
+                <Timer startTime={activeWalk.startTime} className="text-green-500 font-bold text-lg" showPulse />
               </div>
             </Card>
           )}
@@ -327,6 +346,7 @@ export function Dashboard() {
           { icon: <Droplets size={22} className="text-blue-500" />, label: 'Подгузник', path: '/diaper' },
           { icon: <Ruler size={22} className="text-emerald-500" />, label: 'Рост / Вес', path: '/growth' },
           { icon: <FlipVertical2 size={22} className="text-orange-500" />, label: 'Животик', path: '/tummy' },
+          { icon: <Footprints size={22} className="text-green-500" />, label: 'Прогулка', path: '/walk' },
         ].map((item) => (
           <motion.div key={item.path} variants={itemVariants}>
             <QuickButton icon={item.icon} label={item.label} onClick={() => navigate(item.path)} />
