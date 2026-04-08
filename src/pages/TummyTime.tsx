@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
-import { FlipVertical2, Play, Square, Trash2 } from 'lucide-react'
+import { FlipVertical2, Play, Square } from 'lucide-react'
+import { ActionButtons } from '../components/ui/ActionButtons'
 import { useTummyStore } from '../store/tummyStore'
 import { Timer } from '../components/common/Timer'
 import { formatDuration, formatTime } from '../utils/formatTime'
@@ -140,12 +141,7 @@ export function TummyTime() {
                       {r.endTime ? formatDuration(r.startTime, r.endTime) : '—'}
                     </p>
                   </div>
-                  <button
-                    onClick={() => { deleteRecord(r.id); toast('Запись удалена') }}
-                    className="text-gray-300 dark:text-gray-600 hover:text-red-400 transition-colors p-1"
-                  >
-                    <Trash2 size={15} />
-                  </button>
+                  <ActionButtons onDelete={() => { deleteRecord(r.id); toast('Запись удалена') }} />
                 </div>
               ))}
             </div>
@@ -175,12 +171,7 @@ export function TummyTime() {
                         {r.endTime ? formatDuration(r.startTime, r.endTime) : '—'}
                       </p>
                     </div>
-                    <button
-                      onClick={() => deleteRecord(r.id)}
-                      className="text-gray-300 dark:text-gray-600 hover:text-red-400 transition-colors p-1"
-                    >
-                      <Trash2 size={15} />
-                    </button>
+                    <ActionButtons onDelete={() => deleteRecord(r.id)} />
                   </div>
                 ))}
             </div>

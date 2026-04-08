@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
-import { Clock, Milk, Moon, Sun, Droplets, AlertCircle, CheckCircle2, Layers, Ruler, Heart, PenLine, FlipVertical2, Pencil } from 'lucide-react'
+import { Clock, Milk, Moon, Sun, Droplets, AlertCircle, CheckCircle2, Layers, Ruler, Heart, PenLine, FlipVertical2 } from 'lucide-react'
+import { ActionButtons } from '../components/ui/ActionButtons'
 import { useFeedingStore } from '../store/feedingStore'
 import { useSleepStore } from '../store/sleepStore'
 import { useDiaperStore } from '../store/diaperStore'
@@ -553,12 +554,9 @@ export function Timeline() {
                         <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{e.title}</p>
                         <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{e.subtitle}</p>
                       </div>
-                      <button
-                        onClick={() => setEditState({ kind: e.kind, raw: e.raw })}
-                        className="text-gray-300 dark:text-gray-600 hover:text-pink-400 transition-colors p-1 shrink-0"
-                      >
-                        <Pencil size={16} />
-                      </button>
+                      <ActionButtons
+                        onEdit={() => setEditState({ kind: e.kind, raw: e.raw })}
+                      />
                     </motion.div>
                   ))}
                 </motion.div>

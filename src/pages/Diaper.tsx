@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
-import { ChevronLeft, Trash2, Droplets, AlertCircle, CheckCircle2, Layers, Pencil } from 'lucide-react'
+import { ChevronLeft, Droplets, AlertCircle, CheckCircle2, Layers } from 'lucide-react'
+import { ActionButtons } from '../components/ui/ActionButtons'
 import { useDiaperStore } from '../store/diaperStore'
 import { Card } from '../components/common/Card'
 import { Drawer } from '../components/common/Drawer'
@@ -232,22 +233,11 @@ export function Diaper() {
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">{r.notes}</p>
                   )}
                 </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <motion.button
-                    whileTap={{ scale: 0.85 }}
-                    onClick={() => openEdit(r)}
-                    className="text-gray-300 hover:text-blue-400 p-1"
-                  >
-                    <Pencil size={14} />
-                  </motion.button>
-                  <motion.button
-                    whileTap={{ scale: 0.85 }}
-                    onClick={() => handleDelete(r.id)}
-                    className="text-gray-300 hover:text-red-400 p-1"
-                  >
-                    <Trash2 size={14} />
-                  </motion.button>
-                </div>
+                <ActionButtons
+                  onEdit={() => openEdit(r)}
+                  onDelete={() => handleDelete(r.id)}
+                  editColor="hover:text-blue-400"
+                />
               </motion.div>
             )
           })}

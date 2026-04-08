@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
-import { ChevronLeft, Trash2, Ruler } from 'lucide-react'
+import { ChevronLeft, Ruler } from 'lucide-react'
+import { ActionButtons } from '../components/ui/ActionButtons'
 import { useGrowthStore } from '../store/growthStore'
 import { Card } from '../components/common/Card'
 import { Button } from '../components/common/Button'
@@ -182,13 +183,7 @@ export function Growth() {
                   </p>
                   <p className="text-xs text-gray-400">{formatDate(r.date)}</p>
                 </div>
-                <motion.button
-                  whileTap={{ scale: 0.85 }}
-                  onClick={() => handleDelete(r.id)}
-                  className="text-gray-300 hover:text-red-400 p-1"
-                >
-                  <Trash2 size={15} />
-                </motion.button>
+                <ActionButtons onDelete={() => handleDelete(r.id)} />
               </motion.div>
             ))}
           </motion.div>

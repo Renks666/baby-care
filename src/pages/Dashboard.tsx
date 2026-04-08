@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Milk, BedDouble, Droplets, Ruler, Sun, Moon, Baby, AlertCircle, Clock, BellRing, PenLine, Trash2, Plus, FlipVertical2 } from 'lucide-react'
+import { Milk, BedDouble, Droplets, Ruler, Sun, Moon, Baby, AlertCircle, Clock, BellRing, PenLine, Plus, FlipVertical2 } from 'lucide-react'
 import { useThemeStore } from '../store/themeStore'
 import { useChildStore } from '../store/childStore'
 import { useFeedingStore } from '../store/feedingStore'
@@ -9,6 +9,7 @@ import { useSleepStore } from '../store/sleepStore'
 import { useDiaperStore } from '../store/diaperStore'
 import { useGrowthStore } from '../store/growthStore'
 import { useNotesStore } from '../store/notesStore'
+import { ActionButtons } from '../components/ui/ActionButtons'
 import { useHealthStore } from '../store/healthStore'
 import { Card } from '../components/common/Card'
 import { Drawer } from '../components/common/Drawer'
@@ -41,8 +42,9 @@ export function Dashboard() {
   const [noteDrawerOpen, setNoteDrawerOpen] = useState(false)
   const [noteText, setNoteText] = useState('')
   const [noteDate, setNoteDate] = useState(() => new Date().toISOString().slice(0, 10))
-  const [editNote, setEditNote] = useState<{ id: string; text: string; date: string } | null>(null)
-  const { notes, addNote, updateNote, deleteNote } = useNotesStore()
+  const [editNote, setEditNote] = useState<{ id: string; text: string; date: string; folderId?: string } | null>(null)
+  const [noteFolderId, setNoteFolderId] = useState<string | undefined>(undefined)
+  const { notes, folders, addNote, updateNote, deleteNote } = useNotesStore()
   const { getTodayDoses } = useHealthStore()
   const { child } = useChildStore()
   const { records: feedRecords, activeFeeding } = useFeedingStore()
@@ -134,21 +136,23 @@ export function Dashboard() {
 
   function handleAddNote() {
     if (!noteText.trim()) return
-    addNote(noteText.trim(), noteDate)
+    addNote(noteText.trim(), noteDate, noteFolderId)
     setNoteText('')
     setNoteDate(new Date().toISOString().slice(0, 10))
+    setNoteFolderId(undefined)
     setNoteDrawerOpen(false)
   }
 
   function handleSaveEditNote() {
     if (!editNote || !editNote.text.trim()) return
-    updateNote(editNote.id, editNote.text.trim(), editNote.date)
+    updateNote(editNote.id, editNote.text.trim(), editNote.date, editNote.folderId)
     setEditNote(null)
   }
 
   function openNoteDrawer() {
     setNoteDate(new Date().toISOString().slice(0, 10))
     setNoteText('')
+    setNoteFolderId(undefined)
     setNoteDrawerOpen(true)
   }
 
@@ -185,10 +189,10 @@ export function Dashboard() {
           transition={{ delay: 0.1 }}
           className="mt-3 inline-flex items-center gap-2 bg-pink-50 dark:bg-pink-950 rounded-full px-2.5 py-1.5"
         >
-          <div className="w-9 h-9 rounded-full bg-pink-200 dark:bg-pink-900 overflow-hidden flex items-center justify-center shrink-0">
+          <div className="w-12 h-12 rounded-full bg-pink-200 dark:bg-pink-900 overflow-hidden flex items-center justify-center shrink-0">
             {child.photoURI
               ? <img src={child.photoURI} alt={child.name} className="w-full h-full object-cover" />
-              : <Baby size={17} className="text-pink-400" />
+              : <Baby size={22} className="text-pink-400" />
             }
           </div>
           <span className="text-sm font-medium text-pink-600 dark:text-pink-300">
@@ -334,12 +338,20 @@ export function Dashboard() {
       <div className="mt-6">
         <div className="flex items-center justify-between mb-3">
           <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Заметки</p>
-          <button
-            onClick={openNoteDrawer}
-            className="flex items-center gap-1 text-xs text-pink-500 font-medium"
-          >
-            <Plus size={13} /> Добавить
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={openNoteDrawer}
+              className="flex items-center gap-1 text-xs text-pink-500 font-medium"
+            >
+              <Plus size={13} /> Добавить
+            </button>
+            <button
+              onClick={() => navigate('/notes')}
+              className="text-xs text-pink-500 font-medium"
+            >
+              Все →
+            </button>
+          </div>
         </div>
         {sortedNotes.length === 0 ? (
           <button
@@ -351,9 +363,9 @@ export function Dashboard() {
           </button>
         ) : (
           <div className="space-y-2">
-            {sortedNotes.map((note) => (
-              <div key={note.id} className="flex items-start gap-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/50 rounded-xl px-3 py-2.5">
-                <PenLine size={15} className="text-amber-400 mt-0.5 shrink-0" />
+            {sortedNotes.slice(0, 2).map((note) => (
+              <div key={note.id} className="flex items-center gap-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/50 rounded-xl px-3 py-2.5">
+                <PenLine size={15} className="text-amber-400 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-amber-500 dark:text-amber-400 font-medium mb-0.5">
                     {note.date === todayStr
@@ -362,19 +374,21 @@ export function Dashboard() {
                   </p>
                   <p className="text-sm text-gray-700 dark:text-gray-200 leading-snug">{note.text}</p>
                 </div>
-                <div className="flex items-center gap-0.5 shrink-0">
-                  <button
-                    onClick={() => setEditNote({ id: note.id, text: note.text, date: note.date })}
-                    className="text-gray-300 dark:text-gray-600 hover:text-amber-400 transition-colors p-1"
-                  >
-                    <PenLine size={15} />
-                  </button>
-                  <button onClick={() => deleteNote(note.id)} className="text-gray-300 dark:text-gray-600 hover:text-red-400 transition-colors p-1">
-                    <Trash2 size={15} />
-                  </button>
-                </div>
+                <ActionButtons
+                  onEdit={() => setEditNote({ id: note.id, text: note.text, date: note.date, folderId: note.folderId })}
+                  onDelete={() => deleteNote(note.id)}
+                  editColor="hover:text-amber-400"
+                />
               </div>
             ))}
+            {sortedNotes.length > 2 && (
+              <button
+                onClick={() => navigate('/notes')}
+                className="text-xs text-pink-500 font-medium px-1"
+              >
+                Ещё {sortedNotes.length - 2} заметок →
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -438,6 +452,28 @@ export function Dashboard() {
             className="border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-pink-400 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 flex-1"
           />
         </div>
+        {folders.length > 0 && (
+          <div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1.5">Папка</p>
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={() => setNoteFolderId(undefined)}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${!noteFolderId ? 'bg-pink-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
+              >
+                Без папки
+              </button>
+              {folders.map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => setNoteFolderId(f.id)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${noteFolderId === f.id ? 'bg-pink-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
+                >
+                  {f.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <textarea
           value={noteText}
           onChange={(e) => setNoteText(e.target.value)}
@@ -467,6 +503,28 @@ export function Dashboard() {
               className="border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-pink-400 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 flex-1"
             />
           </div>
+          {folders.length > 0 && (
+            <div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1.5">Папка</p>
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  onClick={() => setEditNote({ ...editNote, folderId: undefined })}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${!editNote.folderId ? 'bg-pink-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
+                >
+                  Без папки
+                </button>
+                {folders.map((f) => (
+                  <button
+                    key={f.id}
+                    onClick={() => setEditNote({ ...editNote, folderId: f.id })}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${editNote.folderId === f.id ? 'bg-pink-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
+                  >
+                    {f.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <textarea
             value={editNote.text}
             onChange={(e) => setEditNote({ ...editNote, text: e.target.value })}

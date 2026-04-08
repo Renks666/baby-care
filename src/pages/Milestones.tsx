@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format, differenceInMonths, differenceInDays } from 'date-fns'
 import { ru } from 'date-fns/locale'
-import { Check, Plus, Star, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
+import { Check, Plus, Star, ChevronDown, ChevronUp } from 'lucide-react'
+import { ActionButtons } from '../components/ui/ActionButtons'
 import {
   useMilestonesStore,
   PREDEFINED_MILESTONES,
@@ -312,12 +313,7 @@ export function Milestones() {
                                     {CATEGORY_LABELS[milestone.category].slice(0, 3)}.
                                   </span>
                                   {milestone.isCustom && (
-                                    <button
-                                      onClick={() => removeCustomMilestone(milestone.id)}
-                                      className="p-1 text-gray-300 dark:text-gray-600 hover:text-red-400 transition-colors"
-                                    >
-                                      <Trash2 size={13} />
-                                    </button>
+                                    <ActionButtons onDelete={() => removeCustomMilestone(milestone.id)} />
                                   )}
                                 </div>
                               </div>

@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import {
   ChevronLeft, Thermometer, Pill, Syringe,
-  Trash2, CheckCircle2, Circle, Plus, Clock, XCircle, CalendarClock, ToggleLeft, ToggleRight,
+  CheckCircle2, Circle, Plus, Clock, XCircle, CalendarClock, ToggleLeft, ToggleRight,
 } from 'lucide-react'
 import { useHealthStore } from '../store/healthStore'
 import { Card } from '../components/common/Card'
@@ -12,6 +12,7 @@ import { Button } from '../components/common/Button'
 import { Drawer } from '../components/common/Drawer'
 import { formatDateTime, formatDate } from '../utils/formatTime'
 import { pageVariants, listVariants, itemVariants } from '../utils/animations'
+import { ActionButtons } from '../components/ui/ActionButtons'
 
 type Tab = 'temp' | 'meds' | 'vaccines'
 
@@ -236,13 +237,7 @@ export function Health() {
                         <p className="text-xs text-gray-400">{formatDateTime(r.time)}</p>
                         {r.notes && <p className="text-xs text-gray-400 truncate">{r.notes}</p>}
                       </div>
-                      <motion.button
-                        whileTap={{ scale: 0.85 }}
-                        onClick={() => { deleteTemp(r.id); toast.error('Удалено') }}
-                        className="text-gray-300 hover:text-red-400 p-1"
-                      >
-                        <Trash2 size={15} />
-                      </motion.button>
+                      <ActionButtons onDelete={() => { deleteTemp(r.id); toast.error('Удалено') }} />
                     </motion.div>
                   ))}
                 </motion.div>
@@ -333,9 +328,7 @@ export function Health() {
                             : <ToggleLeft size={20} className="text-gray-300" />
                           }
                         </button>
-                        <button onClick={() => { removeScheduledMed(med.id); toast('Назначение удалено') }} className="p-1 text-gray-300 hover:text-red-400">
-                          <Trash2 size={14} />
-                        </button>
+                        <ActionButtons onDelete={() => { removeScheduledMed(med.id); toast('Назначение удалено') }} />
                       </div>
                     ))}
                   </div>
@@ -384,13 +377,7 @@ export function Health() {
                         <p className="text-xs text-gray-400">{formatDateTime(r.time)}</p>
                         {r.notes && <p className="text-xs text-gray-400 truncate">{r.notes}</p>}
                       </div>
-                      <motion.button
-                        whileTap={{ scale: 0.85 }}
-                        onClick={() => { deleteMedication(r.id); toast.error('Удалено') }}
-                        className="text-gray-300 hover:text-red-400 p-1"
-                      >
-                        <Trash2 size={15} />
-                      </motion.button>
+                      <ActionButtons onDelete={() => { deleteMedication(r.id); toast.error('Удалено') }} />
                     </motion.div>
                   ))}
                 </motion.div>
@@ -466,13 +453,7 @@ export function Health() {
                         </p>
                         {v.notes && <p className="text-xs text-gray-400 truncate">{v.notes}</p>}
                       </div>
-                      <motion.button
-                        whileTap={{ scale: 0.85 }}
-                        onClick={() => { deleteVaccine(v.id); toast.error('Удалено') }}
-                        className="text-gray-200 hover:text-red-400 p-1"
-                      >
-                        <Trash2 size={14} />
-                      </motion.button>
+                      <ActionButtons onDelete={() => { deleteVaccine(v.id); toast.error('Удалено') }} />
                     </motion.div>
                   )
                 })}

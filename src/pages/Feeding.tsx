@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
-import { ChevronLeft, Trash2, Milk, Baby, FlaskConical, Utensils } from 'lucide-react'
+import { ChevronLeft, Milk, Baby, FlaskConical, Utensils } from 'lucide-react'
+import { ActionButtons } from '../components/ui/ActionButtons'
 import { useFeedingStore } from '../store/feedingStore'
 import { Card } from '../components/common/Card'
 import { Button } from '../components/common/Button'
@@ -204,9 +205,7 @@ export function Feeding() {
                       {r.amount ? ` · ${r.amount} мл` : ''}
                     </p>
                   </div>
-                  <motion.button whileTap={{ scale: 0.85 }} onClick={() => handleDelete(r.id)} className="text-gray-300 hover:text-red-400 p-1">
-                    <Trash2 size={15} />
-                  </motion.button>
+                  <ActionButtons onDelete={() => handleDelete(r.id)} />
                 </motion.div>
               )
             })}

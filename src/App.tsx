@@ -15,6 +15,7 @@ import { Analytics } from './pages/Analytics'
 import { Milestones } from './pages/Milestones'
 import { TummyTime } from './pages/TummyTime'
 import { WeeklyReport } from './pages/WeeklyReport'
+import { Notes } from './pages/Notes'
 import { useThemeStore } from './store/themeStore'
 
 function AnimatedRoutes() {
@@ -34,6 +35,7 @@ function AnimatedRoutes() {
         <Route path="/tummy" element={<TummyTime />} />
         <Route path="/weekly" element={<WeeklyReport />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/notes" element={<Notes />} />
       </Routes>
     </AnimatePresence>
   )
