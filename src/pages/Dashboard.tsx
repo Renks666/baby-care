@@ -185,10 +185,10 @@ export function Dashboard() {
           transition={{ delay: 0.1 }}
           className="mt-3 inline-flex items-center gap-2 bg-pink-50 dark:bg-pink-950 rounded-full px-2.5 py-1.5"
         >
-          <div className="w-8 h-8 rounded-full bg-pink-200 dark:bg-pink-900 overflow-hidden flex items-center justify-center shrink-0">
+          <div className="w-9 h-9 rounded-full bg-pink-200 dark:bg-pink-900 overflow-hidden flex items-center justify-center shrink-0">
             {child.photoURI
               ? <img src={child.photoURI} alt={child.name} className="w-full h-full object-cover" />
-              : <Baby size={15} className="text-pink-400" />
+              : <Baby size={17} className="text-pink-400" />
             }
           </div>
           <span className="text-sm font-medium text-pink-600 dark:text-pink-300">
@@ -353,7 +353,7 @@ export function Dashboard() {
           <div className="space-y-2">
             {sortedNotes.map((note) => (
               <div key={note.id} className="flex items-start gap-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/50 rounded-xl px-3 py-2.5">
-                <PenLine size={13} className="text-amber-400 mt-0.5 shrink-0" />
+                <PenLine size={15} className="text-amber-400 mt-0.5 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-amber-500 dark:text-amber-400 font-medium mb-0.5">
                     {note.date === todayStr
@@ -365,12 +365,12 @@ export function Dashboard() {
                 <div className="flex items-center gap-0.5 shrink-0">
                   <button
                     onClick={() => setEditNote({ id: note.id, text: note.text, date: note.date })}
-                    className="text-gray-300 dark:text-gray-600 hover:text-amber-400 transition-colors p-0.5"
+                    className="text-gray-300 dark:text-gray-600 hover:text-amber-400 transition-colors p-1"
                   >
-                    <PenLine size={13} />
+                    <PenLine size={15} />
                   </button>
-                  <button onClick={() => deleteNote(note.id)} className="text-gray-300 dark:text-gray-600 hover:text-red-400 transition-colors p-0.5">
-                    <Trash2 size={13} />
+                  <button onClick={() => deleteNote(note.id)} className="text-gray-300 dark:text-gray-600 hover:text-red-400 transition-colors p-1">
+                    <Trash2 size={15} />
                   </button>
                 </div>
               </div>

@@ -557,7 +557,7 @@ export function Timeline() {
                         onClick={() => setEditState({ kind: e.kind, raw: e.raw })}
                         className="text-gray-300 dark:text-gray-600 hover:text-pink-400 transition-colors p-1 shrink-0"
                       >
-                        <Pencil size={14} />
+                        <Pencil size={16} />
                       </button>
                     </motion.div>
                   ))}
