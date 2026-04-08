@@ -6,6 +6,7 @@ import type { GrowthRecord } from '../types'
 interface GrowthState {
   records: GrowthRecord[]
   addRecord: (record: Omit<GrowthRecord, 'id' | 'childId'>) => void
+  updateRecord: (id: string, patch: Partial<Omit<GrowthRecord, 'id' | 'childId'>>) => void
   deleteRecord: (id: string) => void
   getLatest: () => GrowthRecord | null
 }
@@ -27,6 +28,11 @@ export const useGrowthStore = create<GrowthState>()(
           ),
         }))
       },
+
+      updateRecord: (id, patch) =>
+        set((s) => ({
+          records: s.records.map((r) => (r.id === id ? { ...r, ...patch } : r)),
+        })),
 
       deleteRecord: (id) => {
         set((s) => ({ records: s.records.filter((r) => r.id !== id) }))

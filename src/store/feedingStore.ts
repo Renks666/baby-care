@@ -9,6 +9,7 @@ interface FeedingState {
   startFeeding: (type: FeedingType, side?: BreastSide, startTime?: string) => void
   stopFeeding: (amount?: number, notes?: string) => void
   addRecord: (record: Omit<FeedingRecord, 'id'>) => void
+  updateRecord: (id: string, patch: Partial<Omit<FeedingRecord, 'id' | 'childId'>>) => void
   deleteRecord: (id: string) => void
   getToday: () => FeedingRecord[]
 }
@@ -45,6 +46,11 @@ export const useFeedingStore = create<FeedingState>()(
       addRecord: (record) => {
         set((s) => ({ records: [{ ...record, id: uuid() }, ...s.records] }))
       },
+
+      updateRecord: (id, patch) =>
+        set((s) => ({
+          records: s.records.map((r) => (r.id === id ? { ...r, ...patch } : r)),
+        })),
 
       deleteRecord: (id) => {
         set((s) => ({ records: s.records.filter((r) => r.id !== id) }))

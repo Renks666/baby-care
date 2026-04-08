@@ -6,6 +6,7 @@ import type { DiaperRecord, DiaperType } from '../types'
 interface DiaperState {
   records: DiaperRecord[]
   addRecord: (type: DiaperType, notes?: string, time?: string) => void
+  updateRecord: (id: string, patch: Partial<Omit<DiaperRecord, 'id' | 'childId'>>) => void
   deleteRecord: (id: string) => void
   getToday: () => DiaperRecord[]
 }
@@ -25,6 +26,11 @@ export const useDiaperStore = create<DiaperState>()(
         }
         set((s) => ({ records: [record, ...s.records] }))
       },
+
+      updateRecord: (id, patch) =>
+        set((s) => ({
+          records: s.records.map((r) => (r.id === id ? { ...r, ...patch } : r)),
+        })),
 
       deleteRecord: (id) => {
         set((s) => ({ records: s.records.filter((r) => r.id !== id) }))

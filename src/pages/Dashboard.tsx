@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Milk, BedDouble, Droplets, Ruler, Sparkles, Sun, Moon, Baby, AlertCircle, Clock, BellRing, PenLine, Trash2, Plus, FlipVertical2 } from 'lucide-react'
+import { Milk, BedDouble, Droplets, Ruler, Sun, Moon, Baby, AlertCircle, Clock, BellRing, PenLine, Trash2, Plus, FlipVertical2 } from 'lucide-react'
 import { useThemeStore } from '../store/themeStore'
 import { useChildStore } from '../store/childStore'
 import { useFeedingStore } from '../store/feedingStore'
@@ -40,7 +40,9 @@ export function Dashboard() {
   const { theme, toggleTheme } = useThemeStore()
   const [noteDrawerOpen, setNoteDrawerOpen] = useState(false)
   const [noteText, setNoteText] = useState('')
-  const { addNote, deleteNote, getByDate } = useNotesStore()
+  const [noteDate, setNoteDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [editNote, setEditNote] = useState<{ id: string; text: string; date: string } | null>(null)
+  const { notes, addNote, updateNote, deleteNote } = useNotesStore()
   const { getTodayDoses } = useHealthStore()
   const { child } = useChildStore()
   const { records: feedRecords, activeFeeding } = useFeedingStore()
@@ -119,7 +121,7 @@ export function Dashboard() {
   })()
 
   const todayStr = now.toISOString().slice(0, 10)
-  const todayNotes = getByDate(todayStr)
+  const sortedNotes = [...notes].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   const pendingDoses = getTodayDoses(todayStr).filter((d) => !d.log)
 
   const medsHint = pendingDoses.length > 0
@@ -132,9 +134,22 @@ export function Dashboard() {
 
   function handleAddNote() {
     if (!noteText.trim()) return
-    addNote(noteText.trim())
+    addNote(noteText.trim(), noteDate)
     setNoteText('')
+    setNoteDate(new Date().toISOString().slice(0, 10))
     setNoteDrawerOpen(false)
+  }
+
+  function handleSaveEditNote() {
+    if (!editNote || !editNote.text.trim()) return
+    updateNote(editNote.id, editNote.text.trim(), editNote.date)
+    setEditNote(null)
+  }
+
+  function openNoteDrawer() {
+    setNoteDate(new Date().toISOString().slice(0, 10))
+    setNoteText('')
+    setNoteDrawerOpen(true)
   }
 
   return (
@@ -168,15 +183,14 @@ export function Dashboard() {
           initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.1 }}
-          className="mt-3 inline-flex items-center gap-2 bg-pink-50 dark:bg-pink-950 rounded-full px-3 py-1.5"
+          className="mt-3 inline-flex items-center gap-2 bg-pink-50 dark:bg-pink-950 rounded-full px-2.5 py-1.5"
         >
-          <div className="w-6 h-6 rounded-full bg-pink-200 dark:bg-pink-900 overflow-hidden flex items-center justify-center shrink-0">
+          <div className="w-8 h-8 rounded-full bg-pink-200 dark:bg-pink-900 overflow-hidden flex items-center justify-center shrink-0">
             {child.photoURI
               ? <img src={child.photoURI} alt={child.name} className="w-full h-full object-cover" />
-              : <Baby size={13} className="text-pink-400" />
+              : <Baby size={15} className="text-pink-400" />
             }
           </div>
-          <Sparkles size={13} className="text-pink-400" />
           <span className="text-sm font-medium text-pink-600 dark:text-pink-300">
             {child.name} · {formatAge(child.birthDate)}
           </span>
@@ -316,42 +330,51 @@ export function Dashboard() {
         ))}
       </motion.div>
 
-      {/* Заметки дня */}
+      {/* Заметки */}
       <div className="mt-6">
         <div className="flex items-center justify-between mb-3">
-          <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Заметки дня</p>
+          <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Заметки</p>
           <button
-            onClick={() => setNoteDrawerOpen(true)}
+            onClick={openNoteDrawer}
             className="flex items-center gap-1 text-xs text-pink-500 font-medium"
           >
             <Plus size={13} /> Добавить
           </button>
         </div>
-        {todayNotes.length === 0 ? (
+        {sortedNotes.length === 0 ? (
           <button
-            onClick={() => setNoteDrawerOpen(true)}
+            onClick={openNoteDrawer}
             className="w-full flex items-center gap-2 px-4 py-3 rounded-xl border border-dashed border-pink-200 dark:border-gray-600 text-sm text-gray-400 dark:text-gray-500"
           >
             <PenLine size={15} className="text-pink-300" />
-            Запиши что-нибудь о сегодняшнем дне...
+            Нет заметок — добавь первую...
           </button>
         ) : (
           <div className="space-y-2">
-            {todayNotes.map((note) => (
+            {sortedNotes.map((note) => (
               <div key={note.id} className="flex items-start gap-2 bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/50 rounded-xl px-3 py-2.5">
                 <PenLine size={13} className="text-amber-400 mt-0.5 shrink-0" />
-                <p className="text-sm text-gray-700 dark:text-gray-200 flex-1 leading-snug">{note.text}</p>
-                <button onClick={() => deleteNote(note.id)} className="text-gray-300 dark:text-gray-600 hover:text-red-400 transition-colors shrink-0">
-                  <Trash2 size={13} />
-                </button>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-amber-500 dark:text-amber-400 font-medium mb-0.5">
+                    {note.date === todayStr
+                      ? 'Сегодня'
+                      : format(new Date(note.date + 'T12:00:00'), 'd MMMM', { locale: ru })}
+                  </p>
+                  <p className="text-sm text-gray-700 dark:text-gray-200 leading-snug">{note.text}</p>
+                </div>
+                <div className="flex items-center gap-0.5 shrink-0">
+                  <button
+                    onClick={() => setEditNote({ id: note.id, text: note.text, date: note.date })}
+                    className="text-gray-300 dark:text-gray-600 hover:text-amber-400 transition-colors p-0.5"
+                  >
+                    <PenLine size={13} />
+                  </button>
+                  <button onClick={() => deleteNote(note.id)} className="text-gray-300 dark:text-gray-600 hover:text-red-400 transition-colors p-0.5">
+                    <Trash2 size={13} />
+                  </button>
+                </div>
               </div>
             ))}
-            <button
-              onClick={() => setNoteDrawerOpen(true)}
-              className="flex items-center gap-1 text-xs text-amber-500 font-medium mt-1 pl-1"
-            >
-              <Plus size={12} /> Ещё заметка
-            </button>
           </div>
         )}
       </div>
@@ -404,12 +427,21 @@ export function Dashboard() {
       )}
     </motion.div>
 
-    <Drawer open={noteDrawerOpen} onClose={() => setNoteDrawerOpen(false)} title="Заметка дня">
-      <div className="space-y-3">
+    <Drawer open={noteDrawerOpen} onClose={() => setNoteDrawerOpen(false)} title="Новая заметка">
+      <div className="space-y-3 pb-2">
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-gray-500 dark:text-gray-400 shrink-0">Дата</span>
+          <input
+            type="date"
+            value={noteDate}
+            onChange={(e) => setNoteDate(e.target.value)}
+            className="border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-pink-400 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 flex-1"
+          />
+        </div>
         <textarea
           value={noteText}
           onChange={(e) => setNoteText(e.target.value)}
-          placeholder="Что произошло сегодня?"
+          placeholder="Что хочешь записать?"
           rows={4}
           className="w-full border border-pink-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-300 resize-none"
         />
@@ -421,6 +453,35 @@ export function Dashboard() {
           Сохранить
         </button>
       </div>
+    </Drawer>
+
+    <Drawer open={!!editNote} onClose={() => setEditNote(null)} title="Редактировать заметку">
+      {editNote && (
+        <div className="space-y-3 pb-2">
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-gray-500 dark:text-gray-400 shrink-0">Дата</span>
+            <input
+              type="date"
+              value={editNote.date}
+              onChange={(e) => setEditNote({ ...editNote, date: e.target.value })}
+              className="border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-pink-400 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 flex-1"
+            />
+          </div>
+          <textarea
+            value={editNote.text}
+            onChange={(e) => setEditNote({ ...editNote, text: e.target.value })}
+            rows={4}
+            className="w-full border border-pink-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-300 resize-none"
+          />
+          <button
+            onClick={handleSaveEditNote}
+            disabled={!editNote.text.trim()}
+            className="w-full bg-pink-500 disabled:bg-pink-200 dark:disabled:bg-pink-900/40 text-white py-3 rounded-2xl font-semibold text-sm active:scale-95 transition-transform"
+          >
+            Сохранить
+          </button>
+        </div>
+      )}
     </Drawer>
     </>
   )

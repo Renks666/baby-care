@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
-import { ChevronLeft, Trash2, Droplets, AlertCircle, CheckCircle2, Layers } from 'lucide-react'
+import { ChevronLeft, Trash2, Droplets, AlertCircle, CheckCircle2, Layers, Pencil } from 'lucide-react'
 import { useDiaperStore } from '../store/diaperStore'
 import { Card } from '../components/common/Card'
+import { Drawer } from '../components/common/Drawer'
 import { formatTimeAgo, formatTime } from '../utils/formatTime'
 import { pageVariants, listVariants, itemVariants } from '../utils/animations'
-import type { DiaperType } from '../types'
+import type { DiaperRecord, DiaperType } from '../types'
 
 function resolveToISO(timeStr: string): string {
   const [h, m] = timeStr.split(':').map(Number)
@@ -17,6 +18,11 @@ function resolveToISO(timeStr: string): string {
     date.setDate(date.getDate() - 1)
   }
   return date.toISOString()
+}
+
+function isoToHHMM(iso: string): string {
+  const d = new Date(iso)
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
 function currentHHMM(): string {
@@ -59,19 +65,20 @@ const TYPES: DiaperTypeDef[] = [
 
 export function Diaper() {
   const navigate = useNavigate()
-  const { addRecord, deleteRecord, getToday } = useDiaperStore()
+  const { addRecord, updateRecord, deleteRecord, getToday } = useDiaperStore()
 
   const [manualTime, setManualTime] = useState(currentHHMM)
+  const [newComment, setNewComment] = useState('')
 
-  // Обновляем дефолтное время каждую минуту, пока пользователь не менял его вручную
+  // Состояние редактирования
+  const [editRecord, setEditRecord] = useState<DiaperRecord | null>(null)
+  const [editType, setEditType] = useState<DiaperType>('wet')
+  const [editTime, setEditTime] = useState('')
+  const [editComment, setEditComment] = useState('')
+
   useEffect(() => {
     const interval = setInterval(() => {
-      setManualTime((prev) => {
-        const expected = currentHHMM()
-        // Если пользователь не менял — обновляем. Иначе оставляем его выбор.
-        // Простейший способ: следим только если значение совпадает с «минутой назад»
-        return prev === expected ? prev : prev
-      })
+      setManualTime(currentHHMM())
     }, 60_000)
     return () => clearInterval(interval)
   }, [])
@@ -81,14 +88,33 @@ export function Diaper() {
   const dirtyCount = todayRecords.filter((r) => r.type === 'dirty' || r.type === 'mixed').length
 
   function handleAdd(type: DiaperType) {
-    addRecord(type, undefined, resolveToISO(manualTime))
+    addRecord(type, newComment.trim() || undefined, resolveToISO(manualTime))
     const label = TYPES.find((t) => t.value === type)!.label
     toast.success(`Смена записана · ${label} · ${manualTime}`)
+    setNewComment('')
   }
 
   function handleDelete(id: string) {
     deleteRecord(id)
     toast.error('Запись удалена')
+  }
+
+  function openEdit(r: DiaperRecord) {
+    setEditRecord(r)
+    setEditType(r.type)
+    setEditTime(isoToHHMM(r.time))
+    setEditComment(r.notes ?? '')
+  }
+
+  function handleSaveEdit() {
+    if (!editRecord) return
+    updateRecord(editRecord.id, {
+      type: editType,
+      time: resolveToISO(editTime),
+      notes: editComment.trim() || undefined,
+    })
+    toast.success('Запись обновлена')
+    setEditRecord(null)
   }
 
   return (
@@ -163,6 +189,16 @@ export function Diaper() {
             </motion.button>
           ))}
         </motion.div>
+
+        {/* Комментарий к новой записи */}
+        <textarea
+          value={newComment}
+          onChange={(e) => setNewComment(e.target.value)}
+          placeholder="Комментарий (необязательно)"
+          rows={2}
+          className="w-full mt-3 border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
+        />
+
         {todayRecords[0] && (
           <p className="text-xs text-gray-400 text-center mt-3">
             Последняя смена: {formatTimeAgo(todayRecords[0].time)}
@@ -184,27 +220,85 @@ export function Diaper() {
               <motion.div
                 key={r.id}
                 variants={itemVariants}
-                className="bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-100 dark:border-gray-700 flex items-center gap-3"
+                className="bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-100 dark:border-gray-700 flex items-start gap-3"
               >
-                <div className={`w-9 h-9 rounded-full ${t.bg} flex items-center justify-center shrink-0`}>
+                <div className={`w-9 h-9 rounded-full ${t.bg} flex items-center justify-center shrink-0 mt-0.5`}>
                   <t.Icon size={16} className={t.iconColor} />
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{t.label}</p>
                   <p className="text-xs text-gray-400 dark:text-gray-500">{formatTime(r.time)}</p>
+                  {r.notes && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">{r.notes}</p>
+                  )}
                 </div>
-                <motion.button
-                  whileTap={{ scale: 0.85 }}
-                  onClick={() => handleDelete(r.id)}
-                  className="text-gray-300 hover:text-red-400 p-1"
-                >
-                  <Trash2 size={15} />
-                </motion.button>
+                <div className="flex items-center gap-1 shrink-0">
+                  <motion.button
+                    whileTap={{ scale: 0.85 }}
+                    onClick={() => openEdit(r)}
+                    className="text-gray-300 hover:text-blue-400 p-1"
+                  >
+                    <Pencil size={14} />
+                  </motion.button>
+                  <motion.button
+                    whileTap={{ scale: 0.85 }}
+                    onClick={() => handleDelete(r.id)}
+                    className="text-gray-300 hover:text-red-400 p-1"
+                  >
+                    <Trash2 size={14} />
+                  </motion.button>
+                </div>
               </motion.div>
             )
           })}
         </motion.div>
       )}
+
+      {/* Drawer редактирования */}
+      <Drawer open={!!editRecord} onClose={() => setEditRecord(null)} title="Редактировать запись">
+        <div className="space-y-4 pb-2">
+          {/* Тип */}
+          <div className="grid grid-cols-2 gap-2">
+            {TYPES.map((t) => (
+              <button
+                key={t.value}
+                onClick={() => setEditType(t.value)}
+                className={`${t.bg} ${t.border} border-2 rounded-2xl p-3 text-left transition-opacity ${editType === t.value ? 'opacity-100' : 'opacity-40'}`}
+              >
+                <div className="mb-1"><t.Icon size={18} className={t.iconColor} /></div>
+                <div className={`text-sm font-semibold ${t.color}`}>{t.label}</div>
+              </button>
+            ))}
+          </div>
+
+          {/* Время */}
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-gray-500 dark:text-gray-400 w-16">Время</span>
+            <input
+              type="time"
+              value={editTime}
+              onChange={(e) => setEditTime(e.target.value)}
+              className="border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-400 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700"
+            />
+          </div>
+
+          {/* Комментарий */}
+          <textarea
+            value={editComment}
+            onChange={(e) => setEditComment(e.target.value)}
+            placeholder="Комментарий"
+            rows={3}
+            className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
+          />
+
+          <button
+            onClick={handleSaveEdit}
+            className="w-full bg-blue-500 text-white py-3 rounded-2xl font-semibold text-sm active:scale-95 transition-transform"
+          >
+            Сохранить
+          </button>
+        </div>
+      </Drawer>
     </motion.div>
   )
 }

@@ -9,6 +9,7 @@ interface SleepState {
   startSleep: (type?: SleepType, startTime?: string) => void
   stopSleep: (quality?: number, notes?: string) => void
   addRecord: (record: Omit<SleepRecord, 'id'>) => void
+  updateRecord: (id: string, patch: Partial<Omit<SleepRecord, 'id' | 'childId'>>) => void
   deleteRecord: (id: string) => void
   getToday: () => SleepRecord[]
 }
@@ -49,6 +50,11 @@ export const useSleepStore = create<SleepState>()(
       addRecord: (record) => {
         set((s) => ({ records: [{ ...record, id: uuid() }, ...s.records] }))
       },
+
+      updateRecord: (id, patch) =>
+        set((s) => ({
+          records: s.records.map((r) => (r.id === id ? { ...r, ...patch } : r)),
+        })),
 
       deleteRecord: (id) => {
         set((s) => ({ records: s.records.filter((r) => r.id !== id) }))

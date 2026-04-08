@@ -16,6 +16,7 @@ interface TummyState {
   startTummy: (startTime?: string) => void
   stopTummy: (notes?: string) => void
   addRecord: (record: Omit<TummyRecord, 'id'>) => void
+  updateRecord: (id: string, patch: Partial<Omit<TummyRecord, 'id' | 'childId'>>) => void
   deleteRecord: (id: string) => void
   getToday: () => TummyRecord[]
 }
@@ -52,6 +53,11 @@ export const useTummyStore = create<TummyState>()(
       addRecord: (record) =>
         set((s) => ({
           records: [{ ...record, id: uuid() }, ...s.records],
+        })),
+
+      updateRecord: (id, patch) =>
+        set((s) => ({
+          records: s.records.map((r) => (r.id === id ? { ...r, ...patch } : r)),
         })),
 
       deleteRecord: (id) =>

@@ -12,7 +12,7 @@ export interface DayNote {
 interface NotesState {
   notes: DayNote[]
   addNote: (text: string, date?: string) => void
-  updateNote: (id: string, text: string) => void
+  updateNote: (id: string, text: string, date?: string) => void
   deleteNote: (id: string) => void
   getByDate: (date: string) => DayNote[]
 }
@@ -29,9 +29,11 @@ export const useNotesStore = create<NotesState>()(
         }))
       },
 
-      updateNote: (id, text) =>
+      updateNote: (id, text, date) =>
         set((s) => ({
-          notes: s.notes.map((n) => (n.id === id ? { ...n, text } : n)),
+          notes: s.notes.map((n) =>
+            n.id === id ? { ...n, text, ...(date !== undefined ? { date } : {}) } : n
+          ),
         })),
 
       deleteNote: (id) =>
