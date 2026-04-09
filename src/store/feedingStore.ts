@@ -8,6 +8,8 @@ interface FeedingState {
   activeFeeding: FeedingRecord | null
   startFeeding: (type: FeedingType, side?: BreastSide, startTime?: string) => void
   stopFeeding: (amount?: number, notes?: string) => void
+  pauseFeeding: () => void
+  resumeFeeding: () => void
   addRecord: (record: Omit<FeedingRecord, 'id'>) => void
   updateRecord: (id: string, patch: Partial<Omit<FeedingRecord, 'id' | 'childId'>>) => void
   deleteRecord: (id: string) => void
@@ -34,13 +36,38 @@ export const useFeedingStore = create<FeedingState>()(
       stopFeeding: (amount, notes) => {
         const active = get().activeFeeding
         if (!active) return
+        // если на паузе — сначала накапливаем текущую паузу
+        const pausedMs = active.pausedAt
+          ? (active.pausedMs ?? 0) + (Date.now() - new Date(active.pausedAt).getTime())
+          : (active.pausedMs ?? 0)
         const completed: FeedingRecord = {
           ...active,
           endTime: new Date().toISOString(),
           amount,
           notes,
+          pausedMs: pausedMs || undefined,
+          pausedAt: undefined,
         }
         set((s) => ({ records: [completed, ...s.records], activeFeeding: null }))
+      },
+
+      pauseFeeding: () => {
+        const active = get().activeFeeding
+        if (!active || active.pausedAt) return
+        set({ activeFeeding: { ...active, pausedAt: new Date().toISOString() } })
+      },
+
+      resumeFeeding: () => {
+        const active = get().activeFeeding
+        if (!active || !active.pausedAt) return
+        const addedMs = Date.now() - new Date(active.pausedAt).getTime()
+        set({
+          activeFeeding: {
+            ...active,
+            pausedMs: (active.pausedMs ?? 0) + addedMs,
+            pausedAt: undefined,
+          },
+        })
       },
 
       addRecord: (record) => {

@@ -1,6 +1,23 @@
 import { differenceInMinutes, differenceInHours, format, formatDistanceToNow } from 'date-fns'
 import { ru } from 'date-fns/locale'
 
+/** Конвертирует строку HH:MM в ISO. Если время в будущем — берёт вчера. */
+export function resolveToISO(timeStr: string): string {
+  const [h, m] = timeStr.split(':').map(Number)
+  const date = new Date()
+  date.setHours(h, m, 0, 0)
+  if (date.getTime() > Date.now() + 60_000) {
+    date.setDate(date.getDate() - 1)
+  }
+  return date.toISOString()
+}
+
+/** Текущее время в формате HH:MM */
+export function currentHHMM(): string {
+  const now = new Date()
+  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+}
+
 export function formatDuration(startISO: string, endISO?: string): string {
   const start = new Date(startISO)
   const end = endISO ? new Date(endISO) : new Date()
@@ -26,6 +43,19 @@ export function formatDate(isoString: string): string {
 
 export function formatDateTime(isoString: string): string {
   return format(new Date(isoString), 'd MMM, HH:mm', { locale: ru })
+}
+
+/** Длительность с вычетом времени пауз */
+export function formatNetDuration(startISO: string, endISO?: string, pausedMs = 0): string {
+  const start = new Date(startISO)
+  const end = endISO ? new Date(endISO) : new Date()
+  const netMs = Math.max(0, end.getTime() - start.getTime() - pausedMs)
+  const totalMinutes = Math.floor(netMs / 60000)
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+  if (hours === 0) return `${minutes} мин`
+  if (minutes === 0) return `${hours} ч`
+  return `${hours} ч ${minutes} мин`
 }
 
 export function getDurationMinutes(startISO: string, endISO?: string): number {

@@ -8,6 +8,8 @@ interface SleepState {
   activeSleep: SleepRecord | null
   startSleep: (type?: SleepType, startTime?: string) => void
   stopSleep: (quality?: number, notes?: string) => void
+  pauseSleep: () => void
+  resumeSleep: () => void
   addRecord: (record: Omit<SleepRecord, 'id'>) => void
   updateRecord: (id: string, patch: Partial<Omit<SleepRecord, 'id' | 'childId'>>) => void
   deleteRecord: (id: string) => void
@@ -38,13 +40,37 @@ export const useSleepStore = create<SleepState>()(
       stopSleep: (quality, notes) => {
         const active = get().activeSleep
         if (!active) return
+        const pausedMs = active.pausedAt
+          ? (active.pausedMs ?? 0) + (Date.now() - new Date(active.pausedAt).getTime())
+          : (active.pausedMs ?? 0)
         const completed: SleepRecord = {
           ...active,
           endTime: new Date().toISOString(),
           quality,
           notes,
+          pausedMs: pausedMs || undefined,
+          pausedAt: undefined,
         }
         set((s) => ({ records: [completed, ...s.records], activeSleep: null }))
+      },
+
+      pauseSleep: () => {
+        const active = get().activeSleep
+        if (!active || active.pausedAt) return
+        set({ activeSleep: { ...active, pausedAt: new Date().toISOString() } })
+      },
+
+      resumeSleep: () => {
+        const active = get().activeSleep
+        if (!active || !active.pausedAt) return
+        const addedMs = Date.now() - new Date(active.pausedAt).getTime()
+        set({
+          activeSleep: {
+            ...active,
+            pausedMs: (active.pausedMs ?? 0) + addedMs,
+            pausedAt: undefined,
+          },
+        })
       },
 
       addRecord: (record) => {

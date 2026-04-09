@@ -1,14 +1,9 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { v4 as uuid } from 'uuid'
+import type { TummyRecord } from '../types'
 
-export interface TummyRecord {
-  id: string
-  childId: string
-  startTime: string
-  endTime?: string
-  notes?: string
-}
+export type { TummyRecord }
 
 interface TummyState {
   records: TummyRecord[]

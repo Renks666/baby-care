@@ -22,6 +22,8 @@ export interface FeedingRecord {
   side?: BreastSide
   amount?: number   // мл
   notes?: string
+  pausedAt?: string // ISO — момент начала текущей паузы
+  pausedMs?: number // суммарное время всех пауз в мс
 }
 
 // ── Сон ─────────────────────────────────────────────────
@@ -35,6 +37,8 @@ export interface SleepRecord {
   type: SleepType
   quality?: number // 1–5
   notes?: string
+  pausedAt?: string // ISO — момент начала текущей паузы
+  pausedMs?: number // суммарное время всех пауз в мс
 }
 
 // ── Подгузники ──────────────────────────────────────────
@@ -56,6 +60,15 @@ export interface GrowthRecord {
   weight?: number   // граммы
   height?: number   // см
   headCirc?: number // см
+}
+
+// ── Тумми-тайм ───────────────────────────────────────────
+export interface TummyRecord {
+  id: string
+  childId: string
+  startTime: string
+  endTime?: string
+  notes?: string
 }
 
 // ── Прогулки ─────────────────────────────────────────────

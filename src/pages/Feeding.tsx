@@ -2,16 +2,16 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
-import { ChevronLeft, Milk, Baby, FlaskConical, Utensils } from 'lucide-react'
+import { ChevronLeft, Milk, Baby, FlaskConical, Utensils, Pause, Play } from 'lucide-react'
 import { ActionButtons } from '../components/ui/ActionButtons'
 import { useFeedingStore } from '../store/feedingStore'
 import { Card } from '../components/common/Card'
 import { Button } from '../components/common/Button'
 import { Timer } from '../components/common/Timer'
 import { Drawer } from '../components/common/Drawer'
-import { formatDuration, formatTime } from '../utils/formatTime'
+import { formatNetDuration, formatTime, resolveToISO, currentHHMM } from '../utils/formatTime'
 import { pageVariants, listVariants, itemVariants } from '../utils/animations'
-import type { FeedingType, BreastSide } from '../types'
+import type { FeedingType, BreastSide, FeedingRecord } from '../types'
 
 type FeedingDef = {
   value: FeedingType
@@ -43,28 +43,16 @@ function FeedingIcon({ type, size = 18 }: { type: FeedingType; size?: number }) 
   )
 }
 
-function resolveToISO(timeStr: string): string {
-  const [h, m] = timeStr.split(':').map(Number)
-  const date = new Date()
-  date.setHours(h, m, 0, 0)
-  if (date.getTime() > Date.now() + 60_000) {
-    date.setDate(date.getDate() - 1)
-  }
-  return date.toISOString()
-}
-
-function currentHHMM(): string {
-  const now = new Date()
-  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
-}
 
 export function Feeding() {
   const navigate = useNavigate()
-  const { records, activeFeeding, startFeeding, stopFeeding, addRecord, deleteRecord } = useFeedingStore()
+  const { records, activeFeeding, startFeeding, stopFeeding, pauseFeeding, resumeFeeding, addRecord, updateRecord, deleteRecord } = useFeedingStore()
 
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [stopDrawerOpen, setStopDrawerOpen] = useState(false)
   const [manualDrawerOpen, setManualDrawerOpen] = useState(false)
+  const [editDrawerOpen, setEditDrawerOpen] = useState(false)
+  const [editRecord, setEditRecord] = useState<FeedingRecord | null>(null)
 
   const [selectedType, setSelectedType] = useState<FeedingType>('breast')
   const [selectedSide, setSelectedSide] = useState<BreastSide>('left')
@@ -72,6 +60,12 @@ export function Feeding() {
   const [notes, setNotes] = useState('')
   const [manualStartTime, setManualStartTime] = useState('')
   const [manualEndTime, setManualEndTime] = useState('')
+
+  // Edit state
+  const [editType, setEditType] = useState<FeedingType>('breast')
+  const [editSide, setEditSide] = useState<BreastSide>('left')
+  const [editAmount, setEditAmount] = useState('')
+  const [editNotes, setEditNotes] = useState('')
 
   function openStartDrawer() {
     setManualStartTime(currentHHMM())
@@ -114,6 +108,28 @@ export function Feeding() {
     toast.success('Запись добавлена')
   }
 
+  function openEditDrawer(record: FeedingRecord) {
+    setEditRecord(record)
+    setEditType(record.type)
+    setEditSide(record.side ?? 'left')
+    setEditAmount(record.amount ? String(record.amount) : '')
+    setEditNotes(record.notes ?? '')
+    setEditDrawerOpen(true)
+  }
+
+  function handleEditSave() {
+    if (!editRecord) return
+    updateRecord(editRecord.id, {
+      type: editType,
+      side: editType === 'breast' ? editSide : undefined,
+      amount: editAmount ? parseFloat(editAmount) : undefined,
+      notes: editNotes || undefined,
+    })
+    setEditDrawerOpen(false)
+    setEditRecord(null)
+    toast.success('Запись обновлена')
+  }
+
   function handleDelete(id: string) {
     deleteRecord(id)
     toast.error('Запись удалена')
@@ -152,16 +168,38 @@ export function Feeding() {
               <div className={`w-14 h-14 rounded-full ${activeDef.iconBg} flex items-center justify-center mx-auto mb-3`}>
                 <activeDef.Icon size={26} className={activeDef.iconColor} />
               </div>
-              <p className="text-sm text-pink-400 font-medium mb-2">Кормление идёт</p>
-              <Timer startTime={activeFeeding.startTime} className="text-5xl font-bold text-pink-500" showPulse />
+              <p className="text-sm text-pink-400 font-medium mb-2">
+                {activeFeeding.pausedAt ? 'На паузе ⏸' : 'Кормление идёт'}
+              </p>
+              <Timer
+                startTime={activeFeeding.startTime}
+                pausedMs={activeFeeding.pausedMs}
+                pausedAt={activeFeeding.pausedAt}
+                className="text-5xl font-bold text-pink-500"
+                showPulse
+              />
               <p className="text-sm text-gray-500 mt-3">
                 {activeDef.label}
                 {activeFeeding.side ? ` · ${SIDES.find((s) => s.value === activeFeeding.side)?.label}` : ''}
               </p>
             </div>
-            <Button fullWidth size="lg" onClick={() => setStopDrawerOpen(true)}>
-              Завершить кормление
-            </Button>
+            <div className="space-y-2">
+              <Button
+                fullWidth
+                size="lg"
+                variant="secondary"
+                onClick={activeFeeding.pausedAt ? resumeFeeding : pauseFeeding}
+              >
+                {activeFeeding.pausedAt ? (
+                  <span className="flex items-center justify-center gap-2"><Play size={18} />Продолжить</span>
+                ) : (
+                  <span className="flex items-center justify-center gap-2"><Pause size={18} />Пауза</span>
+                )}
+              </Button>
+              <Button fullWidth size="lg" onClick={() => setStopDrawerOpen(true)}>
+                Завершить кормление
+              </Button>
+            </div>
           </Card>
         ) : (
           <Card className="mb-4">
@@ -201,11 +239,11 @@ export function Feeding() {
                     </p>
                     <p className="text-xs text-gray-400">
                       {formatTime(r.startTime)}
-                      {r.endTime ? ` · ${formatDuration(r.startTime, r.endTime)}` : ''}
+                      {r.endTime ? ` · ${formatNetDuration(r.startTime, r.endTime, r.pausedMs)}` : ''}
                       {r.amount ? ` · ${r.amount} мл` : ''}
                     </p>
                   </div>
-                  <ActionButtons onDelete={() => handleDelete(r.id)} />
+                  <ActionButtons onEdit={() => openEditDrawer(r)} onDelete={() => handleDelete(r.id)} />
                 </motion.div>
               )
             })}
@@ -351,6 +389,56 @@ export function Feeding() {
               className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-pink-400 resize-none bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100" />
           </div>
           <Button fullWidth size="lg" variant="secondary" onClick={handleManualAdd}>Добавить запись</Button>
+        </div>
+      </Drawer>
+
+      {/* Drawer: редактирование */}
+      <Drawer open={editDrawerOpen} onClose={() => setEditDrawerOpen(false)} title="Редактировать запись">
+        <div className="space-y-4 pb-2">
+          <div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-2">Тип кормления</p>
+            <div className="grid grid-cols-4 gap-2">
+              {TYPES.map((t) => (
+                <button key={t.value} onClick={() => setEditType(t.value)}
+                  className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-colors ${
+                    editType === t.value ? 'border-pink-400 bg-pink-50 dark:bg-pink-950' : 'border-gray-100 dark:border-gray-600 bg-gray-50 dark:bg-gray-700'
+                  }`}
+                >
+                  <div className={`w-8 h-8 rounded-full ${t.iconBg} flex items-center justify-center`}>
+                    <t.Icon size={16} className={t.iconColor} />
+                  </div>
+                  <span className="text-[10px] text-gray-600 dark:text-gray-300 font-medium">{t.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          {editType === 'breast' && (
+            <div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-2">Сторона</p>
+              <div className="flex gap-2">
+                {SIDES.map((s) => (
+                  <button key={s.value} onClick={() => setEditSide(s.value)}
+                    className={`flex-1 py-2 rounded-xl text-sm font-medium border-2 transition-colors ${
+                      editSide === s.value ? 'border-pink-400 bg-pink-50 dark:bg-pink-950 text-pink-600' : 'border-gray-100 dark:border-gray-600 text-gray-500 dark:text-gray-400'
+                    }`}
+                  >{s.label}</button>
+                ))}
+              </div>
+            </div>
+          )}
+          {(editType === 'bottle' || editType === 'pumped') && (
+            <div>
+              <label className="text-xs text-gray-500 dark:text-gray-400 font-medium block mb-1">Объём (мл)</label>
+              <input type="number" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} placeholder="например: 120"
+                className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-pink-400 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100" />
+            </div>
+          )}
+          <div>
+            <label className="text-xs text-gray-500 dark:text-gray-400 font-medium block mb-1">Заметки</label>
+            <textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} placeholder="Дополнительная информация..." rows={2}
+              className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-pink-400 resize-none bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100" />
+          </div>
+          <Button fullWidth size="lg" onClick={handleEditSave}>Сохранить</Button>
         </div>
       </Drawer>
     </>

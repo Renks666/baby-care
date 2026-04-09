@@ -2,16 +2,16 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
-import { ChevronLeft, BedDouble, Moon, Sun, Star } from 'lucide-react'
+import { ChevronLeft, BedDouble, Moon, Sun, Star, Pause, Play } from 'lucide-react'
 import { ActionButtons } from '../components/ui/ActionButtons'
 import { useSleepStore } from '../store/sleepStore'
 import { Card } from '../components/common/Card'
 import { Button } from '../components/common/Button'
 import { Timer } from '../components/common/Timer'
 import { Drawer } from '../components/common/Drawer'
-import { formatDuration, formatTime } from '../utils/formatTime'
+import { formatNetDuration, formatTime, resolveToISO, currentHHMM } from '../utils/formatTime'
 import { pageVariants, listVariants, itemVariants } from '../utils/animations'
-import type { SleepType } from '../types'
+import type { SleepType, SleepRecord } from '../types'
 
 type SleepTypeDef = {
   value: SleepType
@@ -26,33 +26,26 @@ const SLEEP_TYPES: SleepTypeDef[] = [
   { value: 'night', label: 'Ночной', Icon: Moon, iconBg: 'bg-indigo-100', iconColor: 'text-indigo-500' },
 ]
 
-function resolveToISO(timeStr: string): string {
-  const [h, m] = timeStr.split(':').map(Number)
-  const date = new Date()
-  date.setHours(h, m, 0, 0)
-  if (date.getTime() > Date.now() + 60_000) {
-    date.setDate(date.getDate() - 1)
-  }
-  return date.toISOString()
-}
-
-function currentHHMM(): string {
-  const now = new Date()
-  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
-}
 
 export function Sleep() {
   const navigate = useNavigate()
-  const { records, activeSleep, startSleep, stopSleep, addRecord, deleteRecord } = useSleepStore()
+  const { records, activeSleep, startSleep, stopSleep, pauseSleep, resumeSleep, addRecord, updateRecord, deleteRecord } = useSleepStore()
 
   const [startDrawerOpen, setStartDrawerOpen] = useState(false)
   const [stopDrawerOpen, setStopDrawerOpen] = useState(false)
   const [manualDrawerOpen, setManualDrawerOpen] = useState(false)
+  const [editDrawerOpen, setEditDrawerOpen] = useState(false)
+  const [editRecord, setEditRecord] = useState<SleepRecord | null>(null)
   const [selectedType, setSelectedType] = useState<SleepType>('nap')
   const [quality, setQuality] = useState<number>(0)
   const [notes, setNotes] = useState('')
   const [manualStartTime, setManualStartTime] = useState('')
   const [manualEndTime, setManualEndTime] = useState('')
+
+  // Edit state
+  const [editType, setEditType] = useState<SleepType>('nap')
+  const [editQuality, setEditQuality] = useState<number>(0)
+  const [editNotes, setEditNotes] = useState('')
 
   function openStartDrawer() {
     setManualStartTime(currentHHMM())
@@ -94,6 +87,26 @@ export function Sleep() {
     toast.success('Запись добавлена')
   }
 
+  function openEditDrawer(record: SleepRecord) {
+    setEditRecord(record)
+    setEditType(record.type)
+    setEditQuality(record.quality ?? 0)
+    setEditNotes(record.notes ?? '')
+    setEditDrawerOpen(true)
+  }
+
+  function handleEditSave() {
+    if (!editRecord) return
+    updateRecord(editRecord.id, {
+      type: editType,
+      quality: editQuality || undefined,
+      notes: editNotes || undefined,
+    })
+    setEditDrawerOpen(false)
+    setEditRecord(null)
+    toast.success('Запись обновлена')
+  }
+
   function handleDelete(id: string) {
     deleteRecord(id)
     toast.error('Запись удалена')
@@ -105,9 +118,8 @@ export function Sleep() {
 
   const totalSleepMin = todayRecords.reduce((acc, r) => {
     if (!r.endTime) return acc
-    return acc + Math.floor(
-      (new Date(r.endTime).getTime() - new Date(r.startTime).getTime()) / 60000
-    )
+    const netMs = new Date(r.endTime).getTime() - new Date(r.startTime).getTime() - (r.pausedMs ?? 0)
+    return acc + Math.floor(netMs / 60000)
   }, 0)
 
   const activeDef = activeSleep ? SLEEP_TYPES.find((t) => t.value === activeSleep.type)! : null
@@ -163,23 +175,42 @@ export function Sleep() {
                 <activeDef.Icon size={26} className={activeDef.iconColor} />
               </div>
               <p className="text-sm text-purple-400 font-medium mb-2">
-                {activeSleep.type === 'night' ? 'Ночной сон' : 'Дневной сон'}
+                {activeSleep.pausedAt
+                  ? 'На паузе ⏸'
+                  : activeSleep.type === 'night' ? 'Ночной сон' : 'Дневной сон'}
               </p>
               <Timer
                 startTime={activeSleep.startTime}
+                pausedMs={activeSleep.pausedMs}
+                pausedAt={activeSleep.pausedAt}
                 className="text-5xl font-bold text-purple-500"
                 showPulse
+                pulseColor="purple"
               />
               <p className="text-xs text-gray-400 mt-3">Засыпание в {formatTime(activeSleep.startTime)}</p>
             </div>
-            <Button
-              fullWidth
-              size="lg"
-              className="bg-purple-500 hover:bg-purple-600 text-white"
-              onClick={() => setStopDrawerOpen(true)}
-            >
-              Проснулась
-            </Button>
+            <div className="space-y-2">
+              <Button
+                fullWidth
+                size="lg"
+                variant="secondary"
+                onClick={activeSleep.pausedAt ? resumeSleep : pauseSleep}
+              >
+                {activeSleep.pausedAt ? (
+                  <span className="flex items-center justify-center gap-2"><Play size={18} />Продолжить</span>
+                ) : (
+                  <span className="flex items-center justify-center gap-2"><Pause size={18} />Пауза</span>
+                )}
+              </Button>
+              <Button
+                fullWidth
+                size="lg"
+                className="bg-purple-500 hover:bg-purple-600 text-white"
+                onClick={() => setStopDrawerOpen(true)}
+              >
+                Проснулась
+              </Button>
+            </div>
           </Card>
         ) : (
           <Card className="mb-4">
@@ -230,11 +261,11 @@ export function Sleep() {
                     <p className="text-xs text-gray-400">
                       {formatTime(r.startTime)}
                       {r.endTime
-                        ? ` → ${formatTime(r.endTime)} · ${formatDuration(r.startTime, r.endTime)}`
+                        ? ` → ${formatTime(r.endTime)} · ${formatNetDuration(r.startTime, r.endTime, r.pausedMs)}`
                         : ' · не завершён'}
                     </p>
                   </div>
-                  <ActionButtons onDelete={() => handleDelete(r.id)} />
+                  <ActionButtons onEdit={() => openEditDrawer(r)} onDelete={() => handleDelete(r.id)} />
                 </motion.div>
               )
             })}
@@ -390,6 +421,58 @@ export function Sleep() {
             className="bg-purple-500 hover:bg-purple-600 text-white"
             onClick={handleStop}
           >
+            Сохранить
+          </Button>
+        </div>
+      </Drawer>
+
+      {/* Drawer: редактирование */}
+      <Drawer open={editDrawerOpen} onClose={() => setEditDrawerOpen(false)} title="Редактировать запись">
+        <div className="space-y-4 pb-2">
+          <div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-2">Тип сна</p>
+            <div className="flex gap-2">
+              {SLEEP_TYPES.map((t) => (
+                <button
+                  key={t.value}
+                  onClick={() => setEditType(t.value)}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 transition-colors ${
+                    editType === t.value
+                      ? 'border-purple-400 bg-purple-50 dark:bg-purple-950 text-purple-600'
+                      : 'border-gray-100 dark:border-gray-600 text-gray-500 dark:text-gray-400'
+                  }`}
+                >
+                  <div className={`w-6 h-6 rounded-full ${t.iconBg} flex items-center justify-center`}>
+                    <t.Icon size={13} className={t.iconColor} />
+                  </div>
+                  <span className="text-sm font-medium">{t.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 font-medium mb-3">Оценка сна</p>
+            <div className="flex justify-around">
+              {[1, 2, 3, 4, 5].map((q) => (
+                <motion.button
+                  key={q}
+                  onClick={() => setEditQuality(editQuality === q ? 0 : q)}
+                  whileTap={{ scale: 0.85 }}
+                  animate={{ scale: editQuality === q ? 1.2 : 1 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                  className={`transition-opacity ${editQuality >= q ? 'opacity-100' : 'opacity-30'}`}
+                >
+                  <Star size={32} className="text-amber-400" fill={editQuality >= q ? '#fbbf24' : 'none'} />
+                </motion.button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 dark:text-gray-400 font-medium block mb-1">Заметки</label>
+            <textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} placeholder="Как спала?" rows={2}
+              className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-purple-400 resize-none bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100" />
+          </div>
+          <Button fullWidth size="lg" className="bg-purple-500 hover:bg-purple-600 text-white" onClick={handleEditSave}>
             Сохранить
           </Button>
         </div>
