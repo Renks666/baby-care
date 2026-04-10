@@ -191,7 +191,7 @@ export function Profile() {
         </Card>
 
         <div className="text-center text-xs text-gray-300 mt-8">
-          <p className="flex items-center justify-center gap-1"><Sparkles size={12} className="text-pink-300" /> BabyCare v1.0</p>
+          <p className="flex items-center justify-center gap-1"><Sparkles size={12} className="text-pink-300" /> BabyCare v{__APP_VERSION__}</p>
           <p className="mt-1">Все данные хранятся локально на устройстве</p>
         </div>
       </motion.div>

@@ -152,6 +152,7 @@ function EditDrawer({ editState, onClose }: { editState: EditState; onClose: () 
       init.weight = r.weight ? String((r.weight as number) / 1000) : ''
       init.height = r.height ? String(r.height) : ''
       init.headCirc = r.headCirc ? String(r.headCirc) : ''
+      init.notes = (r.notes as string) ?? ''
     } else if (editState.kind === 'tummy') {
       init.startTime = isoToHHMM(r.startTime as string)
       init.endTime = r.endTime ? isoToHHMM(r.endTime as string) : ''
@@ -201,6 +202,7 @@ function EditDrawer({ editState, onClose }: { editState: EditState; onClose: () 
           weight: fields.weight ? Math.round(parseFloat(fields.weight) * 1000) : undefined,
           height: fields.height ? parseFloat(fields.height) : undefined,
           headCirc: fields.headCirc ? parseFloat(fields.headCirc) : undefined,
+          notes: fields.notes?.trim() || undefined,
         })
       } else if (editState.kind === 'tummy') {
         updateTummy(id, {
@@ -247,11 +249,11 @@ function EditDrawer({ editState, onClose }: { editState: EditState; onClose: () 
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div>
+            <div className="min-w-0">
               <p className={labelCls}>Начало</p>
               <input type="time" value={fields.startTime} onChange={(e) => set('startTime', e.target.value)} className={inputCls} />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className={labelCls}>Конец</p>
               <input type="time" value={fields.endTime} onChange={(e) => set('endTime', e.target.value)} className={inputCls} />
             </div>
@@ -282,11 +284,11 @@ function EditDrawer({ editState, onClose }: { editState: EditState; onClose: () 
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div>
+            <div className="min-w-0">
               <p className={labelCls}>Начало</p>
               <input type="time" value={fields.startTime} onChange={(e) => set('startTime', e.target.value)} className={inputCls} />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className={labelCls}>Конец</p>
               <input type="time" value={fields.endTime} onChange={(e) => set('endTime', e.target.value)} className={inputCls} />
             </div>
@@ -340,6 +342,10 @@ function EditDrawer({ editState, onClose }: { editState: EditState; onClose: () 
             <p className={labelCls}>Обхват головы (см)</p>
             <input type="number" step="0.1" value={fields.headCirc} onChange={(e) => set('headCirc', e.target.value)} placeholder="напр. 35" className={inputCls} />
           </div>
+          <div>
+            <p className={labelCls}>Комментарий</p>
+            <textarea value={fields.notes ?? ''} onChange={(e) => set('notes', e.target.value)} rows={2} className={`${inputCls} resize-none`} />
+          </div>
         </>
       )
     }
@@ -347,11 +353,11 @@ function EditDrawer({ editState, onClose }: { editState: EditState; onClose: () 
     if (editState.kind === 'tummy') {
       return (
         <div className="grid grid-cols-2 gap-3">
-          <div>
+          <div className="min-w-0">
             <p className={labelCls}>Начало</p>
             <input type="time" value={fields.startTime} onChange={(e) => set('startTime', e.target.value)} className={inputCls} />
           </div>
-          <div>
+          <div className="min-w-0">
             <p className={labelCls}>Конец</p>
             <input type="time" value={fields.endTime} onChange={(e) => set('endTime', e.target.value)} className={inputCls} />
           </div>
@@ -363,11 +369,11 @@ function EditDrawer({ editState, onClose }: { editState: EditState; onClose: () 
       return (
         <>
           <div className="grid grid-cols-2 gap-3">
-            <div>
+            <div className="min-w-0">
               <p className={labelCls}>Начало</p>
               <input type="time" value={fields.startTime} onChange={(e) => set('startTime', e.target.value)} className={inputCls} />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className={labelCls}>Конец</p>
               <input type="time" value={fields.endTime} onChange={(e) => set('endTime', e.target.value)} className={inputCls} />
             </div>
@@ -426,15 +432,29 @@ function EditDrawer({ editState, onClose }: { editState: EditState; onClose: () 
 // ── Основной компонент ─────────────────────────────────────
 
 export function Timeline() {
-  const { records: feedRecords } = useFeedingStore()
-  const { records: sleepRecords } = useSleepStore()
-  const { records: diaperRecords } = useDiaperStore()
-  const { records: growthRecords } = useGrowthStore()
-  const { notes } = useNotesStore()
-  const { records: tummyRecords } = useTummyStore()
-  const { records: walkRecords } = useWalkStore()
+  const { records: feedRecords, deleteRecord: deleteFeedingRecord } = useFeedingStore()
+  const { records: sleepRecords, deleteRecord: deleteSleepRecord } = useSleepStore()
+  const { records: diaperRecords, deleteRecord: deleteDiaperRecord } = useDiaperStore()
+  const { records: growthRecords, deleteRecord: deleteGrowthRecord } = useGrowthStore()
+  const { notes, deleteNote } = useNotesStore()
+  const { records: tummyRecords, deleteRecord: deleteTummyRecord } = useTummyStore()
+  const { records: walkRecords, deleteRecord: deleteWalkRecord } = useWalkStore()
 
   const [editState, setEditState] = useState<EditState>(null)
+
+  function handleDelete(kind: EventKind, id: string) {
+    const map: Record<EventKind, (id: string) => void> = {
+      feeding: deleteFeedingRecord,
+      sleep: deleteSleepRecord,
+      diaper: deleteDiaperRecord,
+      growth: deleteGrowthRecord,
+      tummy: deleteTummyRecord,
+      walk: deleteWalkRecord,
+      note: deleteNote,
+    }
+    map[kind](id)
+    toast.error('Запись удалена')
+  }
 
   const allEvents: EventItem[] = [
     ...feedRecords.map((r) => ({
@@ -607,6 +627,7 @@ export function Timeline() {
                       </div>
                       <ActionButtons
                         onEdit={() => setEditState({ kind: e.kind, raw: e.raw })}
+                        onDelete={() => handleDelete(e.kind, e.id)}
                       />
                     </motion.div>
                   ))}

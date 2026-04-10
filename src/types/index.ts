@@ -60,6 +60,7 @@ export interface GrowthRecord {
   weight?: number   // граммы
   height?: number   // см
   headCirc?: number // см
+  notes?: string
 }
 
 // ── Тумми-тайм ───────────────────────────────────────────

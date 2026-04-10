@@ -220,10 +220,10 @@ export function Dashboard() {
                       {FEEDING_LABELS[activeFeeding.type]}
                       {activeFeeding.side ? ` · ${SIDE_LABELS[activeFeeding.side]}` : ''}
                     </p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500">кормление идёт</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">{activeFeeding.pausedAt ? 'на паузе' : 'кормление идёт'}</p>
                   </div>
                 </div>
-                <Timer startTime={activeFeeding.startTime} className="text-pink-500 font-bold text-lg" showPulse />
+                <Timer startTime={activeFeeding.startTime} pausedMs={activeFeeding.pausedMs} pausedAt={activeFeeding.pausedAt} className="text-pink-500 font-bold text-lg" showPulse />
               </div>
             </Card>
           )}
@@ -239,10 +239,10 @@ export function Dashboard() {
                     <p className="font-semibold text-gray-700 dark:text-gray-200">
                       {activeSleep.type === 'night' ? 'Ночной сон' : 'Дневной сон'}
                     </p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500">спит</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">{activeSleep.pausedAt ? 'на паузе' : 'спит'}</p>
                   </div>
                 </div>
-                <Timer startTime={activeSleep.startTime} className="text-purple-500 font-bold text-lg" showPulse />
+                <Timer startTime={activeSleep.startTime} pausedMs={activeSleep.pausedMs} pausedAt={activeSleep.pausedAt} className="text-purple-500 font-bold text-lg" showPulse pulseColor="purple" />
               </div>
             </Card>
           )}
