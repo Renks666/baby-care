@@ -35,3 +35,10 @@ button:focus-visible {
 input, textarea, select {
   font-size: 16px !important;
 }
+
+/* Фиксируем width для input[type="time"] на iOS 18 (iPhone 16 Pro Max) */
+input[type="time"] {
+  min-width: 0 !important;
+  -webkit-appearance: none;
+  appearance: none;
+}
