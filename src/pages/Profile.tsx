@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
-import { Baby, Sparkles, Download, Upload, Camera, Weight, Ruler } from 'lucide-react'
+import { Baby, Sparkles, Download, Upload, Camera } from 'lucide-react'
 import { useChildStore } from '../store/childStore'
 import { useGrowthStore } from '../store/growthStore'
 import { Card } from '../components/common/Card'
@@ -109,28 +109,6 @@ export function Profile() {
           </motion.div>
           <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{child.name}</h2>
           <p className="text-sm text-pink-500 font-medium mt-1">{formatAge(child.birthDate)}</p>
-          {latestGrowth && (latestGrowth.weight || latestGrowth.height) && (
-            <div className="flex gap-2 mt-2 justify-center flex-wrap">
-              {latestGrowth.weight && (
-                <span className="flex items-center gap-1 px-3 py-1 rounded-full bg-pink-100 dark:bg-pink-950 text-pink-600 dark:text-pink-400 text-xs font-semibold">
-                  <Weight size={11} />
-                  {(latestGrowth.weight / 1000).toFixed(2)} кг
-                </span>
-              )}
-              {latestGrowth.height && (
-                <span className="flex items-center gap-1 px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-600 dark:text-purple-400 text-xs font-semibold">
-                  <Ruler size={11} />
-                  {latestGrowth.height} см
-                </span>
-              )}
-            </div>
-          )}
-          <p className="text-xs text-gray-400 mt-0.5">
-            Родилась{' '}
-            {new Date(child.birthDate).toLocaleDateString('ru-RU', {
-              day: 'numeric', month: 'long', year: 'numeric',
-            })}
-          </p>
         </div>
 
         {/* Последние измерения */}
