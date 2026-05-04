@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
-import { ChevronLeft, Milk, Baby, FlaskConical, Utensils, Pause, Play } from 'lucide-react'
+import { ChevronLeft, Baby, Utensils, Pause, Play } from 'lucide-react'
 import { ActionButtons } from '../components/ui/ActionButtons'
 import { useFeedingStore } from '../store/feedingStore'
 import { Card } from '../components/common/Card'
@@ -11,7 +11,7 @@ import { Timer } from '../components/common/Timer'
 import { Drawer } from '../components/common/Drawer'
 import { formatNetDuration, formatTime, resolveToISO, currentHHMM } from '../utils/formatTime'
 import { pageVariants, listVariants, itemVariants } from '../utils/animations'
-import type { FeedingType, BreastSide, FeedingRecord } from '../types'
+import type { FeedingType, FeedingRecord } from '../types'
 
 type FeedingDef = {
   value: FeedingType
@@ -22,20 +22,14 @@ type FeedingDef = {
 }
 
 const TYPES: FeedingDef[] = [
-  { value: 'breast', label: 'Грудь', Icon: Milk, iconBg: 'bg-pink-100', iconColor: 'text-pink-500' },
   { value: 'bottle', label: 'Смесь', Icon: Baby, iconBg: 'bg-blue-100', iconColor: 'text-blue-500' },
-  { value: 'pumped', label: 'Сцеженное', Icon: FlaskConical, iconBg: 'bg-purple-100', iconColor: 'text-purple-500' },
   { value: 'solid', label: 'Прикорм', Icon: Utensils, iconBg: 'bg-orange-100', iconColor: 'text-orange-500' },
 ]
 
-const SIDES: { value: BreastSide; label: string }[] = [
-  { value: 'left', label: '← Левая' },
-  { value: 'right', label: 'Правая →' },
-  { value: 'both', label: '← Обе →' },
-]
+const FALLBACK_DEF: FeedingDef = TYPES[0]
 
 function FeedingIcon({ type, size = 18 }: { type: FeedingType; size?: number }) {
-  const def = TYPES.find((t) => t.value === type)!
+  const def = TYPES.find((t) => t.value === type) ?? FALLBACK_DEF
   return (
     <div className={`w-9 h-9 rounded-full ${def.iconBg} flex items-center justify-center shrink-0`}>
       <def.Icon size={size} className={def.iconColor} />
@@ -54,16 +48,14 @@ export function Feeding() {
   const [editDrawerOpen, setEditDrawerOpen] = useState(false)
   const [editRecord, setEditRecord] = useState<FeedingRecord | null>(null)
 
-  const [selectedType, setSelectedType] = useState<FeedingType>('breast')
-  const [selectedSide, setSelectedSide] = useState<BreastSide>('left')
+  const [selectedType, setSelectedType] = useState<FeedingType>('bottle')
   const [amount, setAmount] = useState('')
   const [notes, setNotes] = useState('')
   const [manualStartTime, setManualStartTime] = useState('')
   const [manualEndTime, setManualEndTime] = useState('')
 
   // Edit state
-  const [editType, setEditType] = useState<FeedingType>('breast')
-  const [editSide, setEditSide] = useState<BreastSide>('left')
+  const [editType, setEditType] = useState<FeedingType>('bottle')
   const [editAmount, setEditAmount] = useState('')
   const [editNotes, setEditNotes] = useState('')
 
@@ -79,7 +71,7 @@ export function Feeding() {
   }
 
   function handleStart() {
-    startFeeding(selectedType, selectedType === 'breast' ? selectedSide : undefined, resolveToISO(manualStartTime))
+    startFeeding(selectedType, undefined, resolveToISO(manualStartTime))
     setDrawerOpen(false)
     toast.success('Таймер запущен')
   }
@@ -98,7 +90,6 @@ export function Feeding() {
       type: selectedType,
       startTime: resolveToISO(manualStartTime),
       endTime: resolveToISO(manualEndTime),
-      side: selectedType === 'breast' ? selectedSide : undefined,
       amount: amount ? parseFloat(amount) : undefined,
       notes: notes || undefined,
     })
@@ -111,7 +102,6 @@ export function Feeding() {
   function openEditDrawer(record: FeedingRecord) {
     setEditRecord(record)
     setEditType(record.type)
-    setEditSide(record.side ?? 'left')
     setEditAmount(record.amount ? String(record.amount) : '')
     setEditNotes(record.notes ?? '')
     setEditDrawerOpen(true)
@@ -121,7 +111,6 @@ export function Feeding() {
     if (!editRecord) return
     updateRecord(editRecord.id, {
       type: editType,
-      side: editType === 'breast' ? editSide : undefined,
       amount: editAmount ? parseFloat(editAmount) : undefined,
       notes: editNotes || undefined,
     })
@@ -139,7 +128,12 @@ export function Feeding() {
     (r) => new Date(r.startTime).toDateString() === new Date().toDateString()
   )
 
-  const activeDef = activeFeeding ? TYPES.find((t) => t.value === activeFeeding.type)! : null
+  const totalMlToday = todayRecords
+    .filter((r) => r.type === 'bottle')
+    .reduce((sum, r) => sum + (r.amount ?? 0), 0)
+  const formulaCount = todayRecords.filter((r) => r.type === 'bottle').length
+
+  const activeDef = activeFeeding ? (TYPES.find((t) => t.value === activeFeeding.type) ?? FALLBACK_DEF) : null
 
   return (
     <>
@@ -156,7 +150,7 @@ export function Feeding() {
           </motion.button>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center">
-              <Milk size={16} className="text-pink-500" />
+              <Baby size={16} className="text-pink-500" />
             </div>
             <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">Кормление</h1>
           </div>
@@ -180,7 +174,6 @@ export function Feeding() {
               />
               <p className="text-sm text-gray-500 mt-3">
                 {activeDef.label}
-                {activeFeeding.side ? ` · ${SIDES.find((s) => s.value === activeFeeding.side)?.label}` : ''}
               </p>
             </div>
             <div className="space-y-2">
@@ -216,6 +209,22 @@ export function Feeding() {
           </Card>
         )}
 
+        <Card className="mb-4 bg-blue-50 dark:bg-blue-950 border-blue-100 dark:border-blue-900">
+          <p className="text-xs font-semibold text-blue-400 uppercase tracking-wide mb-3">Смесь за сутки</p>
+          <div className="flex gap-6">
+            <div>
+              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                {totalMlToday > 0 ? `${totalMlToday} мл` : '—'}
+              </p>
+              <p className="text-xs text-blue-400 mt-0.5">итого объём</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{formulaCount}</p>
+              <p className="text-xs text-blue-400 mt-0.5">кормлений</p>
+            </div>
+          </div>
+        </Card>
+
         <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-3">
           Сегодня ({todayRecords.length})
         </p>
@@ -235,13 +244,15 @@ export function Feeding() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
                       {def.label}
-                      {r.side ? ` · ${SIDES.find((s) => s.value === r.side)?.label}` : ''}
                     </p>
                     <p className="text-xs text-gray-400">
                       {formatTime(r.startTime)}
                       {r.endTime ? ` · ${formatNetDuration(r.startTime, r.endTime, r.pausedMs)}` : ''}
                       {r.amount ? ` · ${r.amount} мл` : ''}
                     </p>
+                    {r.notes && r.type === 'solid' && (
+                      <p className="text-xs text-orange-400 mt-0.5 truncate">{r.notes}</p>
+                    )}
                   </div>
                   <ActionButtons onEdit={() => openEditDrawer(r)} onDelete={() => handleDelete(r.id)} />
                 </motion.div>
@@ -256,7 +267,7 @@ export function Feeding() {
         <div className="space-y-4 pb-2">
           <div>
             <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-2">Тип кормления</p>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {TYPES.map((t) => (
                 <button
                   key={t.value}
@@ -273,28 +284,17 @@ export function Feeding() {
               ))}
             </div>
           </div>
-          {selectedType === 'breast' && (
-            <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-2">Сторона</p>
-              <div className="flex gap-2">
-                {SIDES.map((s) => (
-                  <button
-                    key={s.value}
-                    onClick={() => setSelectedSide(s.value)}
-                    className={`flex-1 py-2 rounded-xl text-sm font-medium border-2 transition-colors ${
-                      selectedSide === s.value ? 'border-pink-400 bg-pink-50 dark:bg-pink-950 text-pink-600' : 'border-gray-100 dark:border-gray-600 text-gray-500 dark:text-gray-400'
-                    }`}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          {(selectedType === 'bottle' || selectedType === 'pumped') && (
+          {selectedType === 'bottle' && (
             <div>
               <label className="text-xs text-gray-500 dark:text-gray-400 font-medium block mb-1">Объём (мл)</label>
               <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="например: 120"
+                className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-pink-400 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100" />
+            </div>
+          )}
+          {selectedType === 'solid' && (
+            <div>
+              <label className="text-xs text-gray-500 dark:text-gray-400 font-medium block mb-1">Что ест (заметка)</label>
+              <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="например: пюре из яблока"
                 className="w-full border border-gray-200 dark:border-gray-600 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-pink-400 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100" />
             </div>
           )}
@@ -314,7 +314,7 @@ export function Feeding() {
       {/* Drawer: стоп */}
       <Drawer open={stopDrawerOpen} onClose={() => setStopDrawerOpen(false)} title="Завершить кормление">
         <div className="space-y-4 pb-2">
-          {activeFeeding && (activeFeeding.type === 'bottle' || activeFeeding.type === 'pumped') && (
+          {activeFeeding && activeFeeding.type === 'bottle' && (
             <div>
               <label className="text-xs text-gray-500 dark:text-gray-400 font-medium block mb-1">Объём (мл)</label>
               <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="например: 120"
@@ -335,7 +335,7 @@ export function Feeding() {
         <div className="space-y-4 pb-2">
           <div>
             <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-2">Тип кормления</p>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {TYPES.map((t) => (
                 <button key={t.value} onClick={() => setSelectedType(t.value)}
                   className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-colors ${
@@ -350,21 +350,7 @@ export function Feeding() {
               ))}
             </div>
           </div>
-          {selectedType === 'breast' && (
-            <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-2">Сторона</p>
-              <div className="flex gap-2">
-                {SIDES.map((s) => (
-                  <button key={s.value} onClick={() => setSelectedSide(s.value)}
-                    className={`flex-1 py-2 rounded-xl text-sm font-medium border-2 transition-colors ${
-                      selectedSide === s.value ? 'border-pink-400 bg-pink-50 dark:bg-pink-950 text-pink-600' : 'border-gray-100 dark:border-gray-600 text-gray-500 dark:text-gray-400'
-                    }`}
-                  >{s.label}</button>
-                ))}
-              </div>
-            </div>
-          )}
-          {(selectedType === 'bottle' || selectedType === 'pumped') && (
+          {selectedType === 'bottle' && (
             <div>
               <label className="text-xs text-gray-500 dark:text-gray-400 font-medium block mb-1">Объём (мл)</label>
               <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="например: 120"
@@ -397,7 +383,7 @@ export function Feeding() {
         <div className="space-y-4 pb-2">
           <div>
             <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-2">Тип кормления</p>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {TYPES.map((t) => (
                 <button key={t.value} onClick={() => setEditType(t.value)}
                   className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-colors ${
@@ -412,21 +398,7 @@ export function Feeding() {
               ))}
             </div>
           </div>
-          {editType === 'breast' && (
-            <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-2">Сторона</p>
-              <div className="flex gap-2">
-                {SIDES.map((s) => (
-                  <button key={s.value} onClick={() => setEditSide(s.value)}
-                    className={`flex-1 py-2 rounded-xl text-sm font-medium border-2 transition-colors ${
-                      editSide === s.value ? 'border-pink-400 bg-pink-50 dark:bg-pink-950 text-pink-600' : 'border-gray-100 dark:border-gray-600 text-gray-500 dark:text-gray-400'
-                    }`}
-                  >{s.label}</button>
-                ))}
-              </div>
-            </div>
-          )}
-          {(editType === 'bottle' || editType === 'pumped') && (
+          {editType === 'bottle' && (
             <div>
               <label className="text-xs text-gray-500 dark:text-gray-400 font-medium block mb-1">Объём (мл)</label>
               <input type="number" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} placeholder="например: 120"

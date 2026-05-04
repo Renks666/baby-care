@@ -13,7 +13,7 @@ import { useWalkStore } from '../store/walkStore'
 import { Drawer } from '../components/common/Drawer'
 import { formatTime, formatDate, formatDuration } from '../utils/formatTime'
 import { pageVariants, listVariants, itemSlideVariants } from '../utils/animations'
-import type { FeedingType, DiaperType, SleepType, BreastSide } from '../types'
+import type { FeedingType, DiaperType, SleepType } from '../types'
 
 // ── Типы ─────────────────────────────────────────────────
 
@@ -35,22 +35,15 @@ type EventItem = {
 const FEEDING_LABELS: Record<string, string> = {
   breast: 'Грудь', bottle: 'Смесь', pumped: 'Сцеженное', solid: 'Прикорм',
 }
+// breast/pumped kept for backward-compat display of existing records
 
 const DIAPER_LABELS: Record<string, string> = {
   wet: 'Мокрый', dirty: 'Грязный', mixed: 'Смешанный', dry: 'Сухой',
 }
 
 const FEEDING_TYPES: { value: FeedingType; label: string }[] = [
-  { value: 'breast', label: 'Грудь' },
   { value: 'bottle', label: 'Смесь' },
-  { value: 'pumped', label: 'Сцеженное' },
   { value: 'solid', label: 'Прикорм' },
-]
-
-const BREAST_SIDES: { value: BreastSide; label: string }[] = [
-  { value: 'left', label: '← Левая' },
-  { value: 'right', label: 'Правая →' },
-  { value: 'both', label: '← Обе →' },
 ]
 
 const DIAPER_TYPES: { value: DiaperType; label: string; iconColor: string; bg: string; border: string; Icon: React.ComponentType<{ size?: number; className?: string }> }[] = [
@@ -142,8 +135,8 @@ function EditDrawer({ editState, onClose }: { editState: EditState; onClose: () 
     const r = editState.raw
     const init: Record<string, string> = {}
     if (editState.kind === 'feeding') {
-      init.type = (r.type as string) ?? 'breast'
-      init.side = (r.side as string) ?? ''
+      init.type = (r.type as string) ?? 'bottle'
+      init.amount = r.amount ? String(r.amount) : ''
       init.startTime = isoToHHMM(r.startTime as string)
       init.endTime = r.endTime ? isoToHHMM(r.endTime as string) : ''
       init.notes = (r.notes as string) ?? ''
@@ -188,7 +181,7 @@ function EditDrawer({ editState, onClose }: { editState: EditState; onClose: () 
       if (editState.kind === 'feeding') {
         updateFeeding(id, {
           type: fields.type as FeedingType,
-          side: fields.type === 'breast' ? (fields.side as BreastSide || undefined) : undefined,
+          amount: fields.amount ? parseFloat(fields.amount) : undefined,
           startTime: applyHHMMToISO(r.startTime as string, fields.startTime),
           endTime: fields.endTime ? applyHHMMToISO((r.endTime ?? r.startTime) as string, fields.endTime) : undefined,
           notes: fields.notes.trim() || undefined,
@@ -256,22 +249,10 @@ function EditDrawer({ editState, onClose }: { editState: EditState; onClose: () 
               ))}
             </div>
           </div>
-          {fields.type === 'breast' && (
+          {fields.type === 'bottle' && (
             <div>
-              <p className={labelCls}>Сторона</p>
-              <div className="flex gap-2">
-                {BREAST_SIDES.map((s) => (
-                  <button
-                    key={s.value}
-                    onClick={() => set('side', s.value)}
-                    className={`flex-1 py-2 rounded-xl text-sm font-medium border-2 transition-colors ${
-                      fields.side === s.value
-                        ? 'border-pink-400 bg-pink-50 dark:bg-pink-950 text-pink-600'
-                        : 'border-gray-100 dark:border-gray-600 text-gray-500 dark:text-gray-400'
-                    }`}
-                  >{s.label}</button>
-                ))}
-              </div>
+              <p className={labelCls}>Объём (мл)</p>
+              <input type="number" value={fields.amount ?? ''} onChange={(e) => set('amount', e.target.value)} placeholder="например: 120" className={inputCls} />
             </div>
           )}
           <div className="grid grid-cols-2 gap-3">
@@ -489,9 +470,13 @@ export function Timeline() {
       time: r.startTime,
       icon: <FeedIcon type={r.type} />,
       title: FEEDING_LABELS[r.type],
-      subtitle: r.endTime
-        ? `${formatTime(r.startTime)} – ${formatTime(r.endTime)} · ${formatDuration(r.startTime, r.endTime)}`
-        : `${formatTime(r.startTime)} · не завершено`,
+      subtitle: [
+        r.endTime
+          ? `${formatTime(r.startTime)} – ${formatTime(r.endTime)} · ${formatDuration(r.startTime, r.endTime)}`
+          : `${formatTime(r.startTime)} · не завершено`,
+        r.amount ? `${r.amount} мл` : null,
+        r.type === 'solid' && r.notes ? r.notes : null,
+      ].filter(Boolean).join(' · '),
       borderColor: 'border-l-pink-300',
       raw: r as unknown as Record<string, unknown>,
     })),

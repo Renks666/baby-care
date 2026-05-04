@@ -100,14 +100,18 @@ export function Analytics() {
       pumped: recs.filter((r) => r.type === 'pumped').length,
       solid: recs.filter((r) => r.type === 'solid').length,
       total: recs.length,
+      ml: recs.filter((r) => r.type === 'bottle').reduce((sum, r) => sum + (r.amount ?? 0), 0),
     }
   }), [feedingRecords, days])
 
   const feedingStats = useMemo(() => {
     const filtered = feedingRecords.filter((r) => r.startTime.slice(0, 10) >= days[0])
+    const totalMl = filtered.filter((r) => r.type === 'bottle').reduce((sum, r) => sum + (r.amount ?? 0), 0)
     return {
       total: filtered.length,
       avgPerDay: days.length ? Math.round((filtered.length / days.length) * 10) / 10 : 0,
+      totalMl,
+      avgMlPerDay: days.length ? Math.round(totalMl / days.length) : 0,
       byType: {
         breast: filtered.filter((r) => r.type === 'breast').length,
         bottle: filtered.filter((r) => r.type === 'bottle').length,
@@ -118,6 +122,7 @@ export function Analytics() {
   }, [feedingRecords, days])
 
   const feedingEmpty = feedingData.every((d) => d.total === 0)
+  const mlEmpty = feedingData.every((d) => d.ml === 0)
 
   // ── СОН ─────────────────────────────────────────────────
   const sleepData = useMemo(() => days.map((day) => {
@@ -256,6 +261,14 @@ export function Analytics() {
               <p className="text-2xl font-bold text-pink-500">{feedingStats.avgPerDay}</p>
               <p className="text-xs text-gray-400 mt-0.5">в среднем / день</p>
             </Card>
+            <Card className="text-center">
+              <p className="text-2xl font-bold text-amber-500">{feedingStats.totalMl > 0 ? `${feedingStats.totalMl}` : '—'}</p>
+              <p className="text-xs text-gray-400 mt-0.5">мл смеси итого</p>
+            </Card>
+            <Card className="text-center">
+              <p className="text-2xl font-bold text-amber-500">{feedingStats.avgMlPerDay > 0 ? `${feedingStats.avgMlPerDay}` : '—'}</p>
+              <p className="text-xs text-gray-400 mt-0.5">мл / день (ср.)</p>
+            </Card>
           </div>
 
           {/* По типу — с цветными точками */}
@@ -263,10 +276,8 @@ export function Analytics() {
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">По типу</p>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { label: 'Грудь',      value: feedingStats.byType.breast, dot: '#f43f75', bg: 'bg-pink-50 dark:bg-pink-950' },
-                { label: 'Бутылочка', value: feedingStats.byType.bottle, dot: '#f59e0b', bg: 'bg-amber-50 dark:bg-amber-950' },
-                { label: 'Сцеженное', value: feedingStats.byType.pumped, dot: '#3b82f6', bg: 'bg-blue-50 dark:bg-blue-950' },
-                { label: 'Прикорм',   value: feedingStats.byType.solid,  dot: '#22c55e', bg: 'bg-green-50 dark:bg-green-950' },
+                { label: 'Смесь',   value: feedingStats.byType.bottle, dot: '#f59e0b', bg: 'bg-amber-50 dark:bg-amber-950' },
+                { label: 'Прикорм', value: feedingStats.byType.solid,  dot: '#22c55e', bg: 'bg-green-50 dark:bg-green-950' },
               ].map(({ label, value, dot, bg }) => (
                 <div key={label} className={`${bg} rounded-xl p-2.5 text-center`}>
                   <p className="text-lg font-bold text-gray-700 dark:text-gray-200">{value}</p>
@@ -279,7 +290,7 @@ export function Analytics() {
             </div>
           </Card>
 
-          {/* График */}
+          {/* График кормлений */}
           <Card>
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Кормлений в день</p>
             {feedingEmpty ? (
@@ -291,10 +302,26 @@ export function Analytics() {
                   <XAxis dataKey="date" {...AXIS_PROPS} interval={xInterval} />
                   <YAxis {...AXIS_PROPS} allowDecimals={false} />
                   <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(244,63,117,0.06)', radius: 6 }} />
-                  <Bar dataKey="breast" name="Грудь"      stackId="a" fill="#f43f75" animationDuration={700} animationBegin={0} />
-                  <Bar dataKey="bottle" name="Бутылочка"  stackId="a" fill="#f59e0b" animationDuration={700} animationBegin={80} />
-                  <Bar dataKey="pumped" name="Сцеженное"  stackId="a" fill="#3b82f6" animationDuration={700} animationBegin={160} />
-                  <Bar dataKey="solid"  name="Прикорм"    stackId="a" fill="#22c55e" radius={[5, 5, 0, 0]} animationDuration={700} animationBegin={240} />
+                  <Bar dataKey="bottle" name="Смесь"   stackId="a" fill="#f59e0b" animationDuration={700} animationBegin={0} />
+                  <Bar dataKey="solid"  name="Прикорм" stackId="a" fill="#22c55e" radius={[5, 5, 0, 0]} animationDuration={700} animationBegin={80} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </Card>
+
+          {/* График мл */}
+          <Card>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Объём смеси (мл/день)</p>
+            {mlEmpty ? (
+              <EmptyChart Icon={Baby} label="Нет данных о мл за этот период" />
+            ) : (
+              <ResponsiveContainer width="100%" height={180}>
+                <BarChart data={feedingData} margin={{ top: 8, right: 5, bottom: 0, left: -10 }} barSize={period === 30 ? 6 : 14}>
+                  <CartesianGrid {...GRID_PROPS} />
+                  <XAxis dataKey="date" {...AXIS_PROPS} interval={xInterval} />
+                  <YAxis {...AXIS_PROPS} allowDecimals={false} />
+                  <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(245,158,11,0.06)', radius: 6 }} />
+                  <Bar dataKey="ml" name="мл" fill="#f59e0b" radius={[5, 5, 0, 0]} animationDuration={700} animationBegin={0} />
                 </BarChart>
               </ResponsiveContainer>
             )}

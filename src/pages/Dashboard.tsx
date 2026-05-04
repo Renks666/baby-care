@@ -64,6 +64,10 @@ export function Dashboard() {
   const latestGrowth = getLatest()
   const lastFeeding = activeFeeding ?? feedRecords[0]
 
+  const totalMlToday = todayFeedings
+    .filter((r) => r.type === 'bottle')
+    .reduce((acc, r) => acc + (r.amount ?? 0), 0)
+
   const totalSleepMin = todaySleep.reduce((acc, r) => {
     if (!r.endTime) return acc
     return acc + Math.floor(
@@ -300,8 +304,9 @@ export function Dashboard() {
         <motion.div variants={itemVariants}>
           <SummaryCard
             icon={<Milk size={22} />}
-            label="Кормлений" value={String(todayFeedings.length)}
-            sub={hoursSinceLastFeed !== null ? (hoursSinceLastFeed < 1 ? 'только что' : `${hoursSinceLastFeed} ч назад`) : 'не было'}
+            label="Кормлений"
+            value={totalMlToday > 0 ? `${totalMlToday} мл` : String(todayFeedings.length)}
+            sub={totalMlToday > 0 ? `${todayFeedings.length} раз` : (hoursSinceLastFeed !== null ? (hoursSinceLastFeed < 1 ? 'только что' : `${hoursSinceLastFeed} ч назад`) : 'не было')}
             color="pink" onClick={() => navigate('/feeding')}
           />
         </motion.div>
