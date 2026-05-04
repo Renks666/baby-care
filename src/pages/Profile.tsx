@@ -100,11 +100,11 @@ export function Profile() {
           <motion.div
             whileHover={{ scale: 1.05 }}
             transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-            className="w-20 h-20 rounded-full bg-pink-100 flex items-center justify-center mb-3 cursor-default overflow-hidden"
+            className="w-32 h-32 rounded-full bg-pink-100 flex items-center justify-center mb-3 cursor-default overflow-hidden"
           >
             {child.photoURI
               ? <img src={child.photoURI} alt={child.name} className="w-full h-full object-cover" />
-              : <Baby size={40} className="text-pink-400" />
+              : <Baby size={56} className="text-pink-400" />
             }
           </motion.div>
           <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{child.name}</h2>
