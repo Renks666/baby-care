@@ -1,10 +1,9 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { BarChart3, Droplets, Moon, Baby, CalendarRange } from 'lucide-react'
+import { BarChart3, Moon, Baby, CalendarRange } from 'lucide-react'
 import { useFeedingStore } from '../store/feedingStore'
 import { useSleepStore } from '../store/sleepStore'
-import { useDiaperStore } from '../store/diaperStore'
 import { Card } from '../components/common/Card'
 import { pageVariants } from '../utils/animations'
 import {
@@ -14,7 +13,7 @@ import {
 } from 'recharts'
 
 type Period = 7 | 14 | 30
-type Tab = 'feeding' | 'sleep' | 'diaper'
+type Tab = 'feeding' | 'sleep'
 
 function getDaysRange(days: number): string[] {
   const result: string[] = []
@@ -85,8 +84,6 @@ export function Analytics() {
 
   const { records: feedingRecords } = useFeedingStore()
   const { records: sleepRecords } = useSleepStore()
-  const { records: diaperRecords } = useDiaperStore()
-
   const days = useMemo(() => getDaysRange(period), [period])
   const xInterval = period === 7 ? 0 : period === 14 ? 1 : 4
 
@@ -150,37 +147,9 @@ export function Analytics() {
 
   const sleepEmpty = sleepData.every((d) => d.nap === 0 && d.night === 0)
 
-  // ── ПОДГУЗНИКИ ──────────────────────────────────────────
-  const diaperData = useMemo(() => days.map((day) => {
-    const recs = diaperRecords.filter((r) => r.time.slice(0, 10) === day)
-    return {
-      date: shortDate(day),
-      wet: recs.filter((r) => r.type === 'wet').length,
-      dirty: recs.filter((r) => r.type === 'dirty').length,
-      mixed: recs.filter((r) => r.type === 'mixed').length,
-      dry: recs.filter((r) => r.type === 'dry').length,
-      total: recs.length,
-    }
-  }), [diaperRecords, days])
-
-  const diaperStats = useMemo(() => {
-    const filtered = diaperRecords.filter((r) => r.time.slice(0, 10) >= days[0])
-    return {
-      total: filtered.length,
-      avgPerDay: days.length ? Math.round((filtered.length / days.length) * 10) / 10 : 0,
-      wet: filtered.filter((r) => r.type === 'wet').length,
-      dirty: filtered.filter((r) => r.type === 'dirty').length,
-      mixed: filtered.filter((r) => r.type === 'mixed').length,
-      dry: filtered.filter((r) => r.type === 'dry').length,
-    }
-  }, [diaperRecords, days])
-
-  const diaperEmpty = diaperData.every((d) => d.total === 0)
-
   const tabs = [
-    { key: 'feeding' as Tab, label: 'Кормление', Icon: Baby,     activeBg: 'bg-pink-500' },
-    { key: 'sleep'   as Tab, label: 'Сон',       Icon: Moon,     activeBg: 'bg-indigo-500' },
-    { key: 'diaper'  as Tab, label: 'Подгузники', Icon: Droplets, activeBg: 'bg-sky-500' },
+    { key: 'feeding' as Tab, label: 'Кормление', Icon: Baby, activeBg: 'bg-pink-500' },
+    { key: 'sleep'   as Tab, label: 'Сон',       Icon: Moon, activeBg: 'bg-indigo-500' },
   ]
 
   return (
@@ -422,68 +391,6 @@ export function Analytics() {
         </motion.div>
       )}
 
-      {/* ── ПОДГУЗНИКИ ────────────────────────────────────── */}
-      {tab === 'diaper' && (
-        <motion.div
-          key="diaper"
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.18 }}
-          className="space-y-4"
-        >
-          <div className="grid grid-cols-2 gap-3">
-            <Card className="text-center">
-              <p className="text-2xl font-bold text-sky-500">{diaperStats.total}</p>
-              <p className="text-xs text-gray-400 mt-0.5">всего замен</p>
-            </Card>
-            <Card className="text-center">
-              <p className="text-2xl font-bold text-sky-500">{diaperStats.avgPerDay}</p>
-              <p className="text-xs text-gray-400 mt-0.5">в среднем / день</p>
-            </Card>
-          </div>
-
-          {/* По типу — с цветными точками */}
-          <Card>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">По типу</p>
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { label: 'Мокрый',     value: diaperStats.wet,   dot: '#38bdf8', bg: 'bg-sky-50 dark:bg-sky-950' },
-                { label: 'Грязный',    value: diaperStats.dirty, dot: '#d97706', bg: 'bg-amber-50 dark:bg-amber-950' },
-                { label: 'Смешанный',  value: diaperStats.mixed, dot: '#a855f7', bg: 'bg-purple-50 dark:bg-purple-950' },
-                { label: 'Сухой',      value: diaperStats.dry,   dot: '#9ca3af', bg: 'bg-gray-50 dark:bg-gray-800' },
-              ].map(({ label, value, dot, bg }) => (
-                <div key={label} className={`${bg} rounded-xl p-2.5 text-center`}>
-                  <p className="text-lg font-bold text-gray-700 dark:text-gray-200">{value}</p>
-                  <div className="flex items-center justify-center gap-1 mt-0.5">
-                    <div className="w-2 h-2 rounded-full shrink-0" style={{ background: dot }} />
-                    <p className="text-xs text-gray-400">{label}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          <Card>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Замен в день</p>
-            {diaperEmpty ? (
-              <EmptyChart Icon={Droplets} label="Нет данных за этот период" />
-            ) : (
-              <ResponsiveContainer width="100%" height={180}>
-                <BarChart data={diaperData} margin={{ top: 8, right: 5, bottom: 0, left: -20 }} barSize={period === 30 ? 6 : 14}>
-                  <CartesianGrid {...GRID_PROPS} />
-                  <XAxis dataKey="date" {...AXIS_PROPS} interval={xInterval} />
-                  <YAxis {...AXIS_PROPS} allowDecimals={false} />
-                  <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(56,189,248,0.06)', radius: 6 }} />
-                  <Bar dataKey="wet"   name="Мокрый"    stackId="a" fill="#38bdf8" animationDuration={700} animationBegin={0} />
-                  <Bar dataKey="dirty" name="Грязный"   stackId="a" fill="#d97706" animationDuration={700} animationBegin={80} />
-                  <Bar dataKey="mixed" name="Смешанный" stackId="a" fill="#a855f7" animationDuration={700} animationBegin={160} />
-                  <Bar dataKey="dry"   name="Сухой"     stackId="a" fill="#9ca3af" radius={[5, 5, 0, 0]} animationDuration={700} animationBegin={240} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </Card>
-        </motion.div>
-      )}
     </motion.div>
   )
 }

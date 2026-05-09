@@ -41,17 +41,6 @@ export interface SleepRecord {
   pausedMs?: number // суммарное время всех пауз в мс
 }
 
-// ── Подгузники ──────────────────────────────────────────
-export type DiaperType = 'wet' | 'dirty' | 'mixed' | 'dry'
-
-export interface DiaperRecord {
-  id: string
-  childId: string
-  time: string
-  type: DiaperType
-  notes?: string
-}
-
 // ── Рост и вес ──────────────────────────────────────────
 export interface GrowthRecord {
   id: string

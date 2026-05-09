@@ -6,7 +6,6 @@ import { TabBar } from './components/layout/TabBar'
 import { Dashboard } from './pages/Dashboard'
 import { Feeding } from './pages/Feeding'
 import { Sleep } from './pages/Sleep'
-import { Diaper } from './pages/Diaper'
 import { Growth } from './pages/Growth'
 import { Timeline } from './pages/Timeline'
 import { Profile } from './pages/Profile'
@@ -27,7 +26,6 @@ function AnimatedRoutes() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/feeding" element={<Feeding />} />
         <Route path="/sleep" element={<Sleep />} />
-        <Route path="/diaper" element={<Diaper />} />
         <Route path="/growth" element={<Growth />} />
         <Route path="/timeline" element={<Timeline />} />
         <Route path="/health" element={<Health />} />

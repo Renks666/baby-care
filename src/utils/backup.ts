@@ -1,7 +1,6 @@
 const STORAGE_KEYS = [
   'babycare-feeding',
   'babycare-sleep',
-  'babycare-diaper',
   'babycare-growth',
   'babycare-health',
   'babycare-child',

@@ -1,12 +1,11 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Milk, BedDouble, Droplets, Ruler, Sun, Moon, Baby, AlertCircle, Clock, BellRing, PenLine, Plus, FlipVertical2, Footprints } from 'lucide-react'
+import { Milk, BedDouble, Ruler, Sun, Moon, Baby, AlertCircle, Clock, BellRing, PenLine, Plus, FlipVertical2, Footprints } from 'lucide-react'
 import { useThemeStore } from '../store/themeStore'
 import { useChildStore } from '../store/childStore'
 import { useFeedingStore } from '../store/feedingStore'
 import { useSleepStore } from '../store/sleepStore'
-import { useDiaperStore } from '../store/diaperStore'
 import { useGrowthStore } from '../store/growthStore'
 import { useNotesStore } from '../store/notesStore'
 import { ActionButtons } from '../components/ui/ActionButtons'
@@ -50,8 +49,7 @@ export function Dashboard() {
   const { child } = useChildStore()
   const { records: feedRecords, activeFeeding } = useFeedingStore()
   const { records: sleepRecords, activeSleep } = useSleepStore()
-  const { activeWalk } = useWalkStore()
-  const { getToday: getDiaperToday } = useDiaperStore()
+  const { activeWalk, records: walkRecords } = useWalkStore()
   const { getLatest } = useGrowthStore()
 
   const todayFeedings = feedRecords.filter(
@@ -60,7 +58,6 @@ export function Dashboard() {
   const todaySleep = sleepRecords.filter(
     (r) => new Date(r.startTime).toDateString() === new Date().toDateString()
   )
-  const todayDiapers = getDiaperToday()
   const latestGrowth = getLatest()
   const lastFeeding = activeFeeding ?? feedRecords[0]
 
@@ -69,6 +66,16 @@ export function Dashboard() {
     .reduce((acc, r) => acc + (r.amount ?? 0), 0)
 
   const totalSleepMin = todaySleep.reduce((acc, r) => {
+    if (!r.endTime) return acc
+    return acc + Math.floor(
+      (new Date(r.endTime).getTime() - new Date(r.startTime).getTime()) / 60000
+    )
+  }, 0)
+
+  const todayWalks = walkRecords.filter(
+    (r) => new Date(r.startTime).toDateString() === new Date().toDateString()
+  )
+  const totalWalkMin = todayWalks.reduce((acc, r) => {
     if (!r.endTime) return acc
     return acc + Math.floor(
       (new Date(r.endTime).getTime() - new Date(r.startTime).getTime()) / 60000
@@ -106,16 +113,7 @@ export function Dashboard() {
     return { level: 'warn' as const, text: `${child.name} бодрствует уже ${label}` }
   })()
 
-  // 3. Подгузник
-  const diaperHint = (() => {
-    const lastDiaper = todayDiapers[0]
-    if (!lastDiaper) return null
-    const hoursAgo = getHoursSince(lastDiaper.time)
-    if (hoursAgo < 3) return null
-    return { level: 'warn' as const, text: `Проверь подгузник · ${hoursAgo.toFixed(0)} ч назад` }
-  })()
-
-  // 4. Паттерн засыпания
+  // 3. Паттерн засыпания
   const sleepPatternHint = (() => {
     const nightSleeps = sleepRecords.filter((r) => r.type === 'night' && r.endTime).slice(0, 7)
     if (nightSleeps.length < 3) return null
@@ -136,7 +134,7 @@ export function Dashboard() {
     ? { level: 'warn' as const, text: `Лекарства: ${pendingDoses.length} доз осталось` }
     : null
 
-  const hints = [feedingHint, awakeHint, diaperHint, sleepPatternHint, medsHint].filter(Boolean) as {
+  const hints = [feedingHint, awakeHint, sleepPatternHint, medsHint].filter(Boolean) as {
     level: 'neutral' | 'warn' | 'alert' | 'info'; text: string
   }[]
 
@@ -320,19 +318,20 @@ export function Dashboard() {
         </motion.div>
         <motion.div variants={itemVariants}>
           <SummaryCard
-            icon={<Droplets size={22} />}
-            label="Подгузников" value={String(todayDiapers.length)}
-            sub={todayDiapers[0] ? formatTimeAgo(todayDiapers[0].time) : 'не было'}
-            color="blue" onClick={() => navigate('/diaper')}
-          />
-        </motion.div>
-        <motion.div variants={itemVariants}>
-          <SummaryCard
             icon={<Ruler size={22} />}
             label="Вес"
             value={latestGrowth?.weight ? `${(latestGrowth.weight / 1000).toFixed(2)} кг` : '—'}
             sub={latestGrowth?.height ? `${latestGrowth.height} см` : 'нет данных'}
             color="green" onClick={() => navigate('/growth')}
+          />
+        </motion.div>
+        <motion.div variants={itemVariants}>
+          <SummaryCard
+            icon={<Footprints size={22} />}
+            label="Прогулки"
+            value={totalWalkMin > 0 ? formatMins(totalWalkMin) : '—'}
+            sub={`${todayWalks.length} раз`}
+            color="blue" onClick={() => navigate('/walk')}
           />
         </motion.div>
       </motion.div>
@@ -348,7 +347,6 @@ export function Dashboard() {
         {[
           { icon: <Milk size={22} className="text-pink-500" />, label: 'Кормление', path: '/feeding' },
           { icon: <BedDouble size={22} className="text-purple-500" />, label: 'Сон', path: '/sleep' },
-          { icon: <Droplets size={22} className="text-blue-500" />, label: 'Подгузник', path: '/diaper' },
           { icon: <Ruler size={22} className="text-emerald-500" />, label: 'Рост / Вес', path: '/growth' },
           { icon: <FlipVertical2 size={22} className="text-orange-500" />, label: 'Животик', path: '/tummy' },
           { icon: <Footprints size={22} className="text-green-500" />, label: 'Прогулка', path: '/walk' },

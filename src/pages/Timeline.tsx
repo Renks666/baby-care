@@ -1,11 +1,10 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
-import { Clock, Milk, Moon, Sun, Droplets, AlertCircle, CheckCircle2, Layers, Ruler, Heart, PenLine, FlipVertical2, Footprints } from 'lucide-react'
+import { Clock, Milk, Moon, Sun, Ruler, Heart, PenLine, FlipVertical2, Footprints } from 'lucide-react'
 import { ActionButtons } from '../components/ui/ActionButtons'
 import { useFeedingStore } from '../store/feedingStore'
 import { useSleepStore } from '../store/sleepStore'
-import { useDiaperStore } from '../store/diaperStore'
 import { useGrowthStore } from '../store/growthStore'
 import { useNotesStore } from '../store/notesStore'
 import { useTummyStore } from '../store/tummyStore'
@@ -13,11 +12,11 @@ import { useWalkStore } from '../store/walkStore'
 import { Drawer } from '../components/common/Drawer'
 import { formatTime, formatDate, formatDuration } from '../utils/formatTime'
 import { pageVariants, listVariants, itemSlideVariants } from '../utils/animations'
-import type { FeedingType, DiaperType, SleepType } from '../types'
+import type { FeedingType, SleepType } from '../types'
 
 // ── Типы ─────────────────────────────────────────────────
 
-type EventKind = 'feeding' | 'sleep' | 'diaper' | 'growth' | 'tummy' | 'note' | 'walk'
+type EventKind = 'feeding' | 'sleep' | 'growth' | 'tummy' | 'note' | 'walk'
 
 type EventItem = {
   id: string
@@ -37,20 +36,9 @@ const FEEDING_LABELS: Record<string, string> = {
 }
 // breast/pumped kept for backward-compat display of existing records
 
-const DIAPER_LABELS: Record<string, string> = {
-  wet: 'Мокрый', dirty: 'Грязный', mixed: 'Смешанный', dry: 'Сухой',
-}
-
 const FEEDING_TYPES: { value: FeedingType; label: string }[] = [
   { value: 'bottle', label: 'Смесь' },
   { value: 'solid', label: 'Прикорм' },
-]
-
-const DIAPER_TYPES: { value: DiaperType; label: string; iconColor: string; bg: string; border: string; Icon: React.ComponentType<{ size?: number; className?: string }> }[] = [
-  { value: 'wet', label: 'Мокрый', iconColor: 'text-blue-500', bg: 'bg-blue-50', border: 'border-blue-200', Icon: Droplets },
-  { value: 'dirty', label: 'Грязный', iconColor: 'text-yellow-600', bg: 'bg-yellow-50', border: 'border-yellow-200', Icon: AlertCircle },
-  { value: 'mixed', label: 'Смешанный', iconColor: 'text-orange-500', bg: 'bg-orange-50', border: 'border-orange-200', Icon: Layers },
-  { value: 'dry', label: 'Сухой', iconColor: 'text-green-500', bg: 'bg-green-50', border: 'border-green-200', Icon: CheckCircle2 },
 ]
 
 // ── Иконки ─────────────────────────────────────────────────
@@ -85,21 +73,6 @@ function SleepIcon({ type }: { type: string }) {
   )
 }
 
-function DiaperIcon({ type }: { type: string }) {
-  const map: Record<string, { bg: string; Icon: typeof Droplets; color: string }> = {
-    wet: { bg: 'bg-blue-100', Icon: Droplets, color: 'text-blue-500' },
-    dirty: { bg: 'bg-yellow-100', Icon: AlertCircle, color: 'text-yellow-600' },
-    mixed: { bg: 'bg-orange-100', Icon: Layers, color: 'text-orange-500' },
-    dry: { bg: 'bg-green-100', Icon: CheckCircle2, color: 'text-green-500' },
-  }
-  const s = map[type] ?? map.wet
-  return (
-    <div className={`w-8 h-8 rounded-full ${s.bg} flex items-center justify-center shrink-0`}>
-      <s.Icon size={15} className={s.color} />
-    </div>
-  )
-}
-
 // ── Утилиты ─────────────────────────────────────────────────
 
 function isoToHHMM(iso: string): string {
@@ -121,7 +94,6 @@ type EditState = { kind: EventKind; raw: Record<string, unknown> } | null
 function EditDrawer({ editState, onClose }: { editState: EditState; onClose: () => void }) {
   const { updateRecord: updateFeeding } = useFeedingStore()
   const { updateRecord: updateSleep } = useSleepStore()
-  const { updateRecord: updateDiaper } = useDiaperStore()
   const { updateRecord: updateGrowth } = useGrowthStore()
   const { updateRecord: updateTummy } = useTummyStore()
   const { updateRecord: updateWalk } = useWalkStore()
@@ -144,10 +116,6 @@ function EditDrawer({ editState, onClose }: { editState: EditState; onClose: () 
       init.type = (r.type as string) ?? 'nap'
       init.startTime = isoToHHMM(r.startTime as string)
       init.endTime = r.endTime ? isoToHHMM(r.endTime as string) : ''
-    } else if (editState.kind === 'diaper') {
-      init.type = (r.type as string) ?? 'wet'
-      init.time = isoToHHMM(r.time as string)
-      init.notes = (r.notes as string) ?? ''
     } else if (editState.kind === 'growth') {
       init.weight = r.weight ? String((r.weight as number) / 1000) : ''
       init.height = r.height ? String(r.height) : ''
@@ -191,12 +159,6 @@ function EditDrawer({ editState, onClose }: { editState: EditState; onClose: () 
           type: fields.type as SleepType,
           startTime: applyHHMMToISO(r.startTime as string, fields.startTime),
           endTime: fields.endTime ? applyHHMMToISO((r.endTime ?? r.startTime) as string, fields.endTime) : undefined,
-        })
-      } else if (editState.kind === 'diaper') {
-        updateDiaper(id, {
-          type: fields.type as DiaperType,
-          time: applyHHMMToISO(r.time as string, fields.time),
-          notes: fields.notes.trim() || undefined,
         })
       } else if (editState.kind === 'growth') {
         updateGrowth(id, {
@@ -304,36 +266,6 @@ function EditDrawer({ editState, onClose }: { editState: EditState; onClose: () 
       )
     }
 
-    if (editState.kind === 'diaper') {
-      return (
-        <>
-          <div>
-            <p className={labelCls}>Тип</p>
-            <div className="grid grid-cols-2 gap-2">
-              {DIAPER_TYPES.map((t) => (
-                <button
-                  key={t.value}
-                  onClick={() => set('type', t.value)}
-                  className={`${t.bg} ${t.border} border-2 rounded-2xl p-2.5 text-left transition-opacity ${fields.type === t.value ? 'opacity-100' : 'opacity-40'}`}
-                >
-                  <t.Icon size={16} className={t.iconColor} />
-                  <p className="text-xs font-semibold mt-1 text-gray-700">{t.label}</p>
-                </button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <p className={labelCls}>Время</p>
-            <input type="time" value={fields.time} onChange={(e) => set('time', e.target.value)} className={inputCls} />
-          </div>
-          <div>
-            <p className={labelCls}>Комментарий</p>
-            <textarea value={fields.notes} onChange={(e) => set('notes', e.target.value)} rows={2} className={`${inputCls} resize-none`} />
-          </div>
-        </>
-      )
-    }
-
     if (editState.kind === 'growth') {
       return (
         <>
@@ -414,7 +346,6 @@ function EditDrawer({ editState, onClose }: { editState: EditState; onClose: () 
   const titleMap: Record<EventKind, string> = {
     feeding: 'Редактировать кормление',
     sleep: 'Редактировать сон',
-    diaper: 'Редактировать подгузник',
     growth: 'Редактировать замер',
     tummy: 'Редактировать животик',
     walk: 'Редактировать прогулку',
@@ -441,7 +372,6 @@ function EditDrawer({ editState, onClose }: { editState: EditState; onClose: () 
 export function Timeline() {
   const { records: feedRecords, deleteRecord: deleteFeedingRecord } = useFeedingStore()
   const { records: sleepRecords, deleteRecord: deleteSleepRecord } = useSleepStore()
-  const { records: diaperRecords, deleteRecord: deleteDiaperRecord } = useDiaperStore()
   const { records: growthRecords, deleteRecord: deleteGrowthRecord } = useGrowthStore()
   const { notes, deleteNote } = useNotesStore()
   const { records: tummyRecords, deleteRecord: deleteTummyRecord } = useTummyStore()
@@ -453,7 +383,6 @@ export function Timeline() {
     const map: Record<EventKind, (id: string) => void> = {
       feeding: deleteFeedingRecord,
       sleep: deleteSleepRecord,
-      diaper: deleteDiaperRecord,
       growth: deleteGrowthRecord,
       tummy: deleteTummyRecord,
       walk: deleteWalkRecord,
@@ -490,16 +419,6 @@ export function Timeline() {
         ? `${formatTime(r.startTime)} – ${formatTime(r.endTime)} · ${formatDuration(r.startTime, r.endTime)}`
         : `${formatTime(r.startTime)} · не завершён`,
       borderColor: 'border-l-purple-300',
-      raw: r as unknown as Record<string, unknown>,
-    })),
-    ...diaperRecords.map((r) => ({
-      id: r.id,
-      kind: 'diaper' as EventKind,
-      time: r.time,
-      icon: <DiaperIcon type={r.type} />,
-      title: `Подгузник · ${DIAPER_LABELS[r.type]}`,
-      subtitle: formatTime(r.time),
-      borderColor: 'border-l-blue-300',
       raw: r as unknown as Record<string, unknown>,
     })),
     ...growthRecords.map((r) => ({
@@ -613,11 +532,17 @@ export function Timeline() {
             const date = new Date(dateKey)
             const isToday = date.toDateString() === new Date().toDateString()
             const label = isToday ? 'Сегодня' : formatDate(dateKey)
+            const dayMl = events
+              .filter(e => e.kind === 'feeding')
+              .reduce((sum, e) => sum + ((e.raw.amount as number) ?? 0), 0)
             return (
               <div key={dateKey}>
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">{label}</span>
                   <span className="text-xs text-gray-300 dark:text-gray-600">· {events.length} записей</span>
+                  {dayMl > 0 && (
+                    <span className="text-xs text-blue-400 dark:text-blue-500">· {dayMl} мл</span>
+                  )}
                 </div>
                 <motion.div
                   variants={listVariants}

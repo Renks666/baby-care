@@ -189,7 +189,7 @@ export function Profile() {
             onChange={handleImport}
           />
           <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-2 text-center">
-            Бэкап содержит все записи кормлений, сна, подгузников и других данных
+            Бэкап содержит все записи кормлений, сна и других данных
           </p>
         </Card>
 

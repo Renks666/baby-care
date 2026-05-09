@@ -5,10 +5,9 @@ import {
 } from 'recharts'
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval, differenceInMinutes } from 'date-fns'
 import { ru } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, Milk, BedDouble, Droplets, TrendingUp, Award } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Milk, BedDouble, TrendingUp, Award } from 'lucide-react'
 import { useFeedingStore } from '../store/feedingStore'
 import { useSleepStore } from '../store/sleepStore'
-import { useDiaperStore } from '../store/diaperStore'
 import { useGrowthStore } from '../store/growthStore'
 import { useChildStore } from '../store/childStore'
 import { pageVariants } from '../utils/animations'
@@ -30,7 +29,6 @@ export function WeeklyReport() {
 
   const { records: feedRecords } = useFeedingStore()
   const { records: sleepRecords } = useSleepStore()
-  const { records: diaperRecords } = useDiaperStore()
   const { records: growthRecords } = useGrowthStore()
   const { child } = useChildStore()
 
@@ -50,8 +48,6 @@ export function WeeklyReport() {
   // Текущая неделя
   const weekFeedings = feedRecords.filter((r) => isInRange(r.startTime, weekStart, weekEnd))
   const weekSleep = sleepRecords.filter((r) => r.endTime && isInRange(r.startTime, weekStart, weekEnd))
-  const weekDiapers = diaperRecords.filter((r) => isInRange(r.time, weekStart, weekEnd))
-
   const totalSleepMin = weekSleep.reduce((acc, r) =>
     acc + differenceInMinutes(new Date(r.endTime!), new Date(r.startTime)), 0)
   const avgSleepMin = days.length > 0 ? Math.round(totalSleepMin / 7) : 0
@@ -69,7 +65,6 @@ export function WeeklyReport() {
   // Прошлая неделя
   const prevFeedings = feedRecords.filter((r) => isInRange(r.startTime, prevWeekStart, prevWeekEnd))
   const prevSleep = sleepRecords.filter((r) => r.endTime && isInRange(r.startTime, prevWeekStart, prevWeekEnd))
-  const prevDiapers = diaperRecords.filter((r) => isInRange(r.time, prevWeekStart, prevWeekEnd))
   const prevSleepMin = prevSleep.reduce((acc, r) =>
     acc + differenceInMinutes(new Date(r.endTime!), new Date(r.startTime)), 0)
   const prevAvgSleepMin = Math.round(prevSleepMin / 7)
@@ -82,7 +77,6 @@ export function WeeklyReport() {
 
   const feedDelta = delta(weekFeedings.length, prevFeedings.length)
   const sleepDelta = delta(avgSleepMin, prevAvgSleepMin)
-  const diaperDelta = delta(weekDiapers.length, prevDiapers.length)
 
   // Рост за неделю
   const weekGrowth = growthRecords.filter((r) => isInRange(r.date, weekStart, weekEnd))
@@ -169,14 +163,6 @@ export function WeeklyReport() {
             delta={sleepDelta ? { val: sleepDelta.val, positive: sleepDelta.positive, unit: ' мин' } : null}
             bg="bg-purple-50 dark:bg-purple-950/40"
             border="border-purple-100 dark:border-purple-900/40"
-          />
-          <StatCard
-            icon={<Droplets size={18} className="text-blue-500" />}
-            label="Подгузников"
-            value={String(weekDiapers.length)}
-            delta={diaperDelta}
-            bg="bg-blue-50 dark:bg-blue-950/40"
-            border="border-blue-100 dark:border-blue-900/40"
           />
           <StatCard
             icon={<TrendingUp size={18} className="text-emerald-500" />}
